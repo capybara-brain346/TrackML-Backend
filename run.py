@@ -1,4 +1,4 @@
-from models.model_entry import Base, engine
+from models.models import Base, engine
 from config import Config
 from flask import Flask
 from flask_cors import CORS
