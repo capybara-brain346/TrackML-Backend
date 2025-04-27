@@ -10,9 +10,9 @@ load_dotenv()
 
 
 class AgentService:
-    def __init__(self, model_id: str, links: list):
+    def __init__(self, model_id: str, model_links: list):
         self.model_id = model_id
-        self.links = links
+        self.links = model_links
         self.agent = Agent(
             model=Groq(
                 id="meta-llama/llama-4-scout-17b-16e-instruct",
@@ -20,7 +20,7 @@ class AgentService:
             ),
             # model=Ollama(id="llama3.2:3b"),
             tools=[Crawl4aiTools(max_length=None), get_huggingface_information],
-            markdown=True,
+            markdown=False,
         )
 
     def run_agent(self):
