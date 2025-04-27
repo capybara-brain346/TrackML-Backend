@@ -10,9 +10,13 @@ def create_app(config_class=Config):
 
     CORS(app)
 
-    from routes.routes import bp as models_bp
+    from routes.model_routes import bp as models_bp
 
     app.register_blueprint(models_bp, url_prefix="/api/v1")
+
+    from routes.auth_routes import bp as auth_bp
+
+    app.register_blueprint(auth_bp, url_prefix="/api/v1")
 
     return app
 
