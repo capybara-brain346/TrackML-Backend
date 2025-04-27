@@ -1,6 +1,13 @@
+import os
 from flask import Blueprint, request, jsonify
 from models.models import User, session
 from flask_cors import cross_origin, CORS
+import jwt
+from functools import wraps
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 CORS(
@@ -12,6 +19,27 @@ CORS(
         }
     },
 )
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get("Authorization")
+        if not token:
+            return jsonify({"error": "Token is missing"}), 401
+        try:
+            token = token.split(" ")[1]
+            data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            current_user = session.query(User).get(data["user_id"])
+            if not current_user:
+                return jsonify({"error": "Invalid token"}), 401
+        except:
+            return jsonify({"error": "Invalid token"}), 401
+        return f(current_user, *args, **kwargs)
+
+    return decorated
 
 
 @bp.route("/register", methods=["POST", "OPTIONS"])
@@ -37,7 +65,12 @@ def register_user():
     try:
         session.add(user)
         session.commit()
-        return jsonify(user.to_dict()), 201
+        token = jwt.encode(
+            {"user_id": user.id, "exp": datetime.utcnow() + timedelta(days=1)},
+            SECRET_KEY,
+            algorithm="HS256",
+        )
+        return jsonify({"token": token, "user": user.to_dict()}), 201
     except Exception as e:
         session.rollback()
         return jsonify({"error": str(e)}), 500
@@ -59,12 +92,25 @@ def login():
     if not user or not user.check_password(data["password"]):
         return jsonify({"error": "Invalid credentials"}), 401
 
-    return jsonify(user.to_dict()), 200
+    token = jwt.encode(
+        {"user_id": user.id, "exp": datetime.utcnow() + timedelta(days=1)},
+        SECRET_KEY,
+        algorithm="HS256",
+    )
+    return jsonify({"token": token, "user": user.to_dict()}), 200
+
+
+@bp.route("/verify-token", methods=["GET", "OPTIONS"])
+@cross_origin(origins=["http://localhost:5173"], methods=["GET", "OPTIONS"])
+@token_required
+def verify_token(current_user):
+    return jsonify({"user": current_user.to_dict()}), 200
 
 
 @bp.route("/user/<int:user_id>", methods=["PUT", "OPTIONS"])
 @cross_origin(origins=["http://localhost:5173"], methods=["PUT", "OPTIONS"])
-def update_user(user_id):
+@token_required
+def update_user(current_user, user_id):
     if request.method == "OPTIONS":
         return "", 200
 
@@ -105,7 +151,8 @@ def update_user(user_id):
 
 @bp.route("/user/<int:user_id>", methods=["DELETE", "OPTIONS"])
 @cross_origin(origins=["http://localhost:5173"], methods=["DELETE", "OPTIONS"])
-def delete_user(user_id):
+@token_required
+def delete_user(current_user, user_id):
     if request.method == "OPTIONS":
         return "", 200
 
