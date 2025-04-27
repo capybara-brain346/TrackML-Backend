@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from models.model_entry import ModelEntry, session
 from datetime import datetime
 from services.model_extractor_service import ModelExtractor
+from services.agent_service import AgentService
 from services.rag_service import RAGService
 
 bp = Blueprint("routes", __name__)
@@ -88,23 +89,12 @@ def search_models():
 @bp.route("/autofill", methods=["POST"])
 def autofill_model():
     data = request.get_json()
-    source = data.get("source")
-    identifier = data.get("identifier")
+    model_id: str = data.get("model_id")
+    model_links: list = data.get("model_links")
 
-    if not source or not identifier:
-        return {"error": "Missing source or identifier"}, 400
-
-    if source == "huggingface":
-        model_data = model_extractor.extract_from_huggingface(identifier)
-    elif source == "github":
-        model_data = model_extractor.extract_from_github(identifier)
-    else:
-        return {"error": "Invalid source"}, 400
-
-    if not model_data:
-        return {"error": "Failed to extract model information"}, 404
-
-    return jsonify(model_data)
+    agent_service = AgentService(model_id=model_id, model_links=model_links)
+    agent_response = agent_service.run_agent()
+    return jsonify(agent_response)
 
 
 @bp.route("/<int:id>/insights", methods=["GET"])

@@ -69,21 +69,17 @@
 - Request Body:
 ```json
 {
-  "source": "huggingface" | "github",
-  "identifier": string
+  "model_id": string,
+  "model_links": array[string]
 }
 ```
-- Response: Model information
-- Errors:
-  - 400: Missing source/identifier
-  - 400: Invalid source
-  - 404: Failed to extract information
+- Response: Agent-generated model information
 
 ### Get Model Insights
 **GET /{id}/insights**
 - Parameters:
   - `id`: Model ID (integer)
-- Response: Model insights object
+- Response: RAG-generated insights about the model
 - Error (404): If model not found
 
 ### Compare Models
@@ -94,7 +90,7 @@
   "model_ids": array[integer]
 }
 ```
-- Response: Comparison analysis
+- Response: RAG-generated comparative analysis
 - Errors:
   - 400: No model IDs provided
   - 404: No models found
