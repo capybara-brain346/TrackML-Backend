@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
-from backend.models.models import ModelEntry, session
+from models.models import ModelEntry, session
 from datetime import datetime
-from backend.services.model_extractor_service import ModelExtractor
-from backend.services.rag_service import RAGService
+from services.model_extractor_service import ModelExtractor
+from services.rag_service import RAGService
 
 bp = Blueprint("routes", __name__)
 
