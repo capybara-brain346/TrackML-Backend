@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models.models import ModelEntry, session
+from models.model_entry import ModelEntry, session
 from datetime import datetime
 from services.model_extractor_service import ModelExtractor
 from services.rag_service import RAGService
