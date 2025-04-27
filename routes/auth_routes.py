@@ -1,11 +1,25 @@
 from flask import Blueprint, request, jsonify
 from models.models import User, session
+from flask_cors import cross_origin, CORS
 
-bp = Blueprint("auth", __name__)
+bp = Blueprint("auth", __name__, url_prefix="/auth")
+CORS(
+    bp,
+    resources={
+        r"/*": {
+            "origins": ["http://localhost:5173"],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        }
+    },
+)
 
 
-@bp.route("/register", methods=["POST"])
+@bp.route("/register", methods=["POST", "OPTIONS"])
+@cross_origin(origins=["http://localhost:5173"], methods=["POST", "OPTIONS"])
 def register_user():
+    if request.method == "OPTIONS":
+        return "", 200
+
     data = request.get_json()
 
     if not all(k in data for k in ["username", "email", "password"]):
@@ -29,8 +43,12 @@ def register_user():
         return jsonify({"error": str(e)}), 500
 
 
-@bp.route("/login", methods=["POST"])
+@bp.route("/login", methods=["POST", "OPTIONS"])
+@cross_origin(origins=["http://localhost:5173"], methods=["POST", "OPTIONS"])
 def login():
+    if request.method == "OPTIONS":
+        return "", 200
+
     data = request.get_json()
 
     if not all(k in data for k in ["email", "password"]):
@@ -44,8 +62,12 @@ def login():
     return jsonify(user.to_dict()), 200
 
 
-@bp.route("/user/<int:user_id>", methods=["PUT"])
+@bp.route("/user/<int:user_id>", methods=["PUT", "OPTIONS"])
+@cross_origin(origins=["http://localhost:5173"], methods=["PUT", "OPTIONS"])
 def update_user(user_id):
+    if request.method == "OPTIONS":
+        return "", 200
+
     data = request.get_json()
     user = session.query(User).get(user_id)
 
@@ -81,8 +103,12 @@ def update_user(user_id):
         return jsonify({"error": str(e)}), 500
 
 
-@bp.route("/user/<int:user_id>", methods=["DELETE"])
+@bp.route("/user/<int:user_id>", methods=["DELETE", "OPTIONS"])
+@cross_origin(origins=["http://localhost:5173"], methods=["DELETE", "OPTIONS"])
 def delete_user(user_id):
+    if request.method == "OPTIONS":
+        return "", 200
+
     user = session.query(User).get(user_id)
 
     if not user:
