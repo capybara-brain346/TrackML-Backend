@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
 from models.models import User, session
-from datetime import datetime
 
 bp = Blueprint("auth", __name__)
 
@@ -49,32 +48,34 @@ def login():
 def update_user(user_id):
     data = request.get_json()
     user = session.query(User).get(user_id)
-    
+
     if not user:
         return jsonify({"error": "User not found"}), 404
-    
+
     try:
         if "username" in data:
-            existing_user = session.query(User).filter_by(username=data["username"]).first()
+            existing_user = (
+                session.query(User).filter_by(username=data["username"]).first()
+            )
             if existing_user and existing_user.id != user_id:
                 return jsonify({"error": "Username already exists"}), 400
             user.username = data["username"]
-            
+
         if "email" in data:
             existing_user = session.query(User).filter_by(email=data["email"]).first()
             if existing_user and existing_user.id != user_id:
                 return jsonify({"error": "Email already exists"}), 400
             user.email = data["email"]
-            
+
         if "password" in data:
             user.set_password(data["password"])
-            
+
         if "is_active" in data:
             user.is_active = data["is_active"]
-            
+
         session.commit()
         return jsonify(user.to_dict()), 200
-        
+
     except Exception as e:
         session.rollback()
         return jsonify({"error": str(e)}), 500
@@ -83,21 +84,15 @@ def update_user(user_id):
 @bp.route("/user/<int:user_id>", methods=["DELETE"])
 def delete_user(user_id):
     user = session.query(User).get(user_id)
-    
+
     if not user:
         return jsonify({"error": "User not found"}), 404
-        
+
     try:
-        # Soft delete - just deactivate the user
         user.is_active = False
         session.commit()
         return jsonify({"message": "User deactivated successfully"}), 200
-        
-        # For hard delete, uncomment the following:
-        # session.delete(user)
-        # session.commit()
-        # return jsonify({"message": "User deleted successfully"}), 200
-        
+
     except Exception as e:
         session.rollback()
         return jsonify({"error": str(e)}), 500

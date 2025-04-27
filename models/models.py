@@ -16,9 +16,7 @@ from sqlalchemy.orm import sessionmaker, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://piyush:root123@localhost:5432/trackml"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 session = Session()
