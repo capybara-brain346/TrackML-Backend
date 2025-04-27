@@ -4,7 +4,7 @@ from agno.agent import Agent, RunResponse
 from agno.models.ollama import Ollama
 from agno.tools.crawl4ai import Crawl4aiTools
 from agno.models.groq import Groq
-from services.huggingface_tool import get_huggingface_information
+# from services.huggingface_tool import get_huggingface_information
 
 load_dotenv()
 
@@ -19,7 +19,7 @@ class AgentService:
                 api_key=os.getenv("GROQ_API_KEY"),
             ),
             # model=Ollama(id="llama3.2:3b"),
-            tools=[Crawl4aiTools(max_length=None), get_huggingface_information],
+            tools=[Crawl4aiTools(max_length=None)],
             markdown=False,
         )
 
