@@ -1,10 +1,18 @@
 # TrackML API Documentation
 
+## CORS Support
+
+All endpoints support CORS with the following configuration:
+
+- Allowed Origin: http://localhost:5173
+- Allowed Methods: GET, POST, PUT, DELETE, OPTIONS
+- All endpoints support OPTIONS preflight requests
+
 ## Models
 
 ### Get All Models
 
-**GET /**
+**GET / or OPTIONS /**
 
 - Returns a list of all models
 - Response: Array of model objects
@@ -24,7 +32,7 @@
 
 ### Get Model by ID
 
-**GET /{id}**
+**GET /{id} or OPTIONS /{id}**
 
 - Parameters:
   - `id`: Model ID (integer)
@@ -33,7 +41,7 @@
 
 ### Create Model
 
-**POST /**
+**POST / or OPTIONS /**
 
 - Request Body:
 
@@ -51,7 +59,7 @@
 
 ### Update Model
 
-**PUT /{id}**
+**PUT /{id} or OPTIONS /{id}**
 
 - Parameters:
   - `id`: Model ID (integer)
@@ -61,7 +69,7 @@
 
 ### Delete Model
 
-**DELETE /{id}**
+**DELETE /{id} or OPTIONS /{id}**
 
 - Parameters:
   - `id`: Model ID (integer)
@@ -70,7 +78,7 @@
 
 ### Search Models
 
-**GET /search**
+**GET /search or OPTIONS /search**
 
 - Query Parameters:
   - `q`: Search query (string)
@@ -81,7 +89,7 @@
 
 ### Autofill Model
 
-**POST /autofill**
+**POST /autofill or OPTIONS /autofill**
 
 - Request Body:
 
@@ -96,7 +104,7 @@
 
 ### Get Model Insights
 
-**GET /{id}/insights**
+**GET /{id}/insights or OPTIONS /{id}/insights**
 
 - Parameters:
   - `id`: Model ID (integer)
@@ -105,7 +113,7 @@
 
 ### Compare Models
 
-**POST /insights/compare**
+**POST /insights/compare or OPTIONS /insights/compare**
 
 - Request Body:
 
@@ -124,7 +132,7 @@
 
 ### Register User
 
-**POST /auth/register**
+**POST /auth/register or OPTIONS /auth/register**
 
 - Request Body:
 
@@ -143,7 +151,7 @@
 
 ### Login
 
-**POST /auth/login**
+**POST /auth/login or OPTIONS /auth/login**
 
 - Request Body:
 
@@ -159,9 +167,19 @@
   - 400: Missing fields
   - 401: Invalid credentials
 
+### Verify Token
+
+**GET /auth/verify-token or OPTIONS /auth/verify-token**
+
+- Headers:
+  - `Authorization`: Bearer token
+- Response: User object
+- Errors:
+  - 401: Missing or invalid token
+
 ### Update User
 
-**PUT /auth/user/{id}**
+**PUT /auth/user/{id} or OPTIONS /auth/user/{id}**
 
 - Parameters:
   - `id`: User ID (integer)
@@ -183,7 +201,7 @@
 
 ### Delete User
 
-**DELETE /auth/user/{id}**
+**DELETE /auth/user/{id} or OPTIONS /auth/user/{id}**
 
 - Parameters:
   - `id`: User ID (integer)
@@ -191,3 +209,21 @@
 - Errors:
   - 404: User not found
   - 500: Server error
+
+## Common HTTP Status Codes
+
+- 200: Success
+- 201: Created
+- 204: No Content
+- 400: Bad Request
+- 401: Unauthorized
+- 404: Not Found
+- 500: Server Error
+
+## CORS Response Headers
+
+All responses include the following CORS headers:
+
+- Access-Control-Allow-Origin: http://localhost:5173
+- Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+- Access-Control-Allow-Headers: Content-Type, Authorization
