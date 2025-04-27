@@ -1,9 +1,14 @@
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Date, PickleType, Text
+from sqlalchemy import create_engine, Column, Integer, String, Date, ARRAY, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import os
 
-engine = create_engine("sqlite:///sqlite3.db")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql://piyush:root123@localhost:5432/trackml"
+)
+engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 session = Session()
 
@@ -19,9 +24,9 @@ class ModelEntry(Base):
     model_type = Column(String(50))
     status = Column(String(50))
     date_interacted = Column(Date, default=datetime.now())
-    tags = Column(PickleType, default=list)
+    tags = Column(ARRAY(String), default=list)
     notes = Column(Text)
-    source_links = Column(PickleType, default=list)
+    source_links = Column(ARRAY(String), default=list)
     parameters = Column(Integer, nullable=True)
     license = Column(String(50), nullable=True)
     version = Column(String(50), nullable=True)

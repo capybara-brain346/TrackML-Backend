@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
-from backend.config import Config
+from config import Config
 
 
 def create_app(config_class=Config):
@@ -9,7 +9,7 @@ def create_app(config_class=Config):
 
     CORS(app)
 
-    from backend.routes.routes import bp as models_bp
+    from routes.routes import bp as models_bp
 
     app.register_blueprint(models_bp, url_prefix="/api/v1")
 

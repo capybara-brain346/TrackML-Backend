@@ -1,5 +1,21 @@
-from backend import create_app
-from backend.models.models import Base, engine
+from models.models import Base, engine
+from config import Config
+from flask import Flask
+from flask_cors import CORS
+
+
+def create_app(config_class=Config):
+    app = Flask(__name__)
+    app.config.from_object(config_class)
+
+    CORS(app)
+
+    from routes.routes import bp as models_bp
+
+    app.register_blueprint(models_bp, url_prefix="/api/v1")
+
+    return app
+
 
 app = create_app()
 
