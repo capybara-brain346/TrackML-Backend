@@ -124,9 +124,12 @@ def autofill_model():
     model_id: str = data.get("model_id")
     model_links: list = data.get("model_links")
 
-    agent_service = AgentService(model_id=model_id, model_links=model_links)
-    agent_response = agent_service.run_agent()
-    return jsonify(agent_response)
+    try:
+        agent_service = AgentService(model_id=model_id, model_links=model_links)
+        agent_response = agent_service.run_agent()
+        return jsonify({"success": True, "response": agent_response})
+    except Exception as e:
+        return jsonify({"success": False, "error": e})
 
 
 @bp.route("/<int:id>/insights", methods=["GET", "OPTIONS"])

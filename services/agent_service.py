@@ -25,8 +25,9 @@ class AgentService:
 
     def run_agent(self):
         run: RunResponse = self.agent.run(
-            f"Use the Crew4AI web search tool to retrieve information about the given ML model and summarize it consisely.\nGiven model name: {self.model_id}\nLinks containing information about the model: {self.links}"
+            f"You are an AI agent with access to the Crew4AI web search tool.\n\nTask: Use the tool to search for reliable and relevant information about the following machine learning model:\n\nModel Name: {self.model_id}\nProvided Links: {self.links}\n\nInstructions:\n1. Use the web search tool to retrieve detailed and credible information.\n2. Cross-reference the provided links if necessary.\n3. Summarize the model’s key attributes, including its purpose, architecture, capabilities, and known applications.\n\nOutput: Return a concise and informative summary suitable for someone evaluating the model’s utility."
         )
+
         return run.content
 
 

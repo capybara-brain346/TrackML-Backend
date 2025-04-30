@@ -12,12 +12,11 @@ class RAGService:
         self.model = "gemini-2.0-flash"
 
     def generate_model_insights(self, model_data: Dict[str, Any]) -> Dict[str, Any]:
-        context = self._prepare_context(model_data)
         insights = {}
 
         tech_prompt = f"""
         Based on this ML model information:
-        {context}
+        {model_data}
         
         Provide a technical analysis focusing on:
         1. Architecture strengths and potential limitations
@@ -30,7 +29,7 @@ class RAGService:
 
         use_case_prompt = f"""
         Given this ML model's characteristics:
-        {context}
+        {model_data}
         
         Suggest:
         1. Primary use cases
@@ -43,7 +42,7 @@ class RAGService:
 
         rec_prompt = f"""
         Based on this model's profile:
-        {context}
+        {model_data}
         
         Provide:
         1. Best practices for implementation
@@ -81,7 +80,7 @@ class RAGService:
     def analyze_multiple_models(
         self, models_data: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        contexts = [self._prepare_context(model) for model in models_data]
+        contexts = [model for model in models_data]
         combined_context = "\n\n".join(contexts)
 
         comparative_prompt = f"""
