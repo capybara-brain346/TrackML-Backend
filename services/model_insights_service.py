@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class RAGService:
+class ModelInsightsService:
     def __init__(self):
         self.client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
         self.model = "gemini-2.0-flash"
@@ -80,7 +80,7 @@ class RAGService:
     def analyze_multiple_models(
         self, models_data: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        contexts = [model for model in models_data]
+        contexts = [str(model) for model in models_data]
         combined_context = "\n\n".join(contexts)
 
         comparative_prompt = f"""
@@ -91,8 +91,9 @@ class RAGService:
         1. Comparative analysis of their strengths and weaknesses
         2. Potential complementary use cases
         3. Integration opportunities
+        4. Recommendations for which model to use in different scenarios
         
-        Format as bullet points, focus on practical insights.
+        Format as bullet points, focus on practical insights and clear distinctions between the models.
         """
 
         try:

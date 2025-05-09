@@ -1,9 +1,8 @@
 from flask import Blueprint, request, jsonify
 from models.models import ModelEntry, session
 from datetime import datetime
-from services.model_extractor_service import ModelExtractor
 from services.agent_service import AgentService
-from services.rag_service import RAGService
+from services.model_insights_service import ModelInsightsService
 from flask_cors import cross_origin, CORS
 
 
@@ -18,8 +17,7 @@ CORS(
     },
 )
 
-model_extractor = ModelExtractor()
-rag_service = RAGService()
+model_insights_service = ModelInsightsService()
 
 
 @bp.route("/", methods=["GET", "OPTIONS"])
@@ -127,9 +125,9 @@ def autofill_model():
     try:
         agent_service = AgentService(model_id=model_id, model_links=model_links)
         agent_response = agent_service.run_agent()
-        return jsonify({"success": True, "response": agent_response})
+        return jsonify({"success": True, "response": agent_response}), 200
     except Exception as e:
-        return jsonify({"success": False, "error": e})
+        return jsonify({"success": False, "error": e}), 500
 
 
 @bp.route("/<int:id>/insights", methods=["GET", "OPTIONS"])
@@ -141,7 +139,7 @@ def get_model_insights(id):
     if not model:
         return {"error": "Model not found"}, 404
 
-    insights = rag_service.generate_model_insights(model.to_dict())
+    insights = model_insights_service.generate_model_insights(model.to_dict())
     return jsonify(insights)
 
 
@@ -160,7 +158,7 @@ def compare_models():
     if not models:
         return {"error": "No models found"}, 404
 
-    analysis = rag_service.analyze_multiple_models(
+    analysis = model_insights_service.analyze_multiple_models(
         [model.to_dict() for model in models]
     )
     return jsonify(analysis)
