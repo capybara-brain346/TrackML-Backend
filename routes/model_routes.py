@@ -8,7 +8,7 @@ from services.model_insights_service import ModelInsightsService
 from services.semantic_search_service import SemanticSearchService
 from flask_cors import cross_origin, CORS
 from api_typing.typing import ApiResponseHandler
-
+from routes.auth_routes import token_required
 
 bp = Blueprint("models", __name__, url_prefix="/models")
 CORS(
@@ -27,19 +27,20 @@ semantic_search_service = SemanticSearchService()
 
 @bp.route("/", methods=["GET", "OPTIONS"])
 @cross_origin(origins=["http://localhost:5173"], methods=["GET", "OPTIONS"])
-def get_models():
+@token_required
+def get_models(current_user):
     if request.method == "OPTIONS":
         return "", 200
     models = session.query(ModelEntry).all()
     return jsonify(ApiResponseHandler.success([model.to_dict() for model in models]))
 
-
 @bp.route("/<int:id>", methods=["GET", "OPTIONS"])
 @cross_origin(origins=["http://localhost:5173"], methods=["GET", "OPTIONS"])
-def get_model(id):
+@token_required
+def get_model(current_user, id):
     if request.method == "OPTIONS":
         return "", 200
-    model = session.query(ModelEntry).get(id)
+    model = session.query(ModelEntry).filter_by(id=id, user_id=current_user.id).first()
     if not model:
         return jsonify(ApiResponseHandler.error("Model not found", 404)), 404
     return jsonify(ApiResponseHandler.success(model.to_dict()))
@@ -47,13 +48,15 @@ def get_model(id):
 
 @bp.route("/", methods=["POST", "OPTIONS"])
 @cross_origin(origins=["http://localhost:5173"], methods=["POST", "OPTIONS"])
-def create_model():
+@token_required
+def create_model(current_user):
     if request.method == "OPTIONS":
         return "", 200
     data = request.get_json()
     if "date_interacted" in data and data["date_interacted"]:
         data["date_interacted"] = datetime.fromisoformat(data["date_interacted"]).date()
 
+    data["user_id"] = current_user.id
     model = ModelEntry(**data)
     session.add(model)
     session.commit()
@@ -62,10 +65,11 @@ def create_model():
 
 @bp.route("/<int:id>", methods=["PUT", "OPTIONS"])
 @cross_origin(origins=["http://localhost:5173"], methods=["PUT", "OPTIONS"])
-def update_model(id):
+@token_required
+def update_model(current_user, id):
     if request.method == "OPTIONS":
         return "", 200
-    model = session.query(ModelEntry).get(id)
+    model = session.query(ModelEntry).filter_by(id=id, user_id=current_user.id).first()
     if not model:
         return jsonify(ApiResponseHandler.error("Model not found", 404)), 404
 
@@ -82,10 +86,11 @@ def update_model(id):
 
 @bp.route("/<int:id>", methods=["DELETE", "OPTIONS"])
 @cross_origin(origins=["http://localhost:5173"], methods=["DELETE", "OPTIONS"])
-def delete_model(id):
+@token_required
+def delete_model(current_user, id):
     if request.method == "OPTIONS":
         return "", 200
-    model = session.query(ModelEntry).get(id)
+    model = session.query(ModelEntry).filter_by(id=id, user_id=current_user.id).first()
     if not model:
         return jsonify(ApiResponseHandler.error("Model not found", 404)), 404
 
@@ -100,7 +105,8 @@ def delete_model(id):
 
 @bp.route("/search", methods=["GET", "OPTIONS"])
 @cross_origin(origins=["http://localhost:5173"], methods=["GET", "OPTIONS"])
-def search_models():
+@token_required
+def search_models(current_user):
     if request.method == "OPTIONS":
         return "", 200
     query = request.args.get("q", "")
@@ -108,7 +114,7 @@ def search_models():
     status = request.args.get("status")
     tag = request.args.get("tag")
 
-    models = session.query(ModelEntry)
+    models = session.query(ModelEntry).filter_by(user_id=current_user.id)
 
     if query:
         models = models.filter(ModelEntry.name.ilike(f"%{query}%"))
@@ -126,7 +132,8 @@ def search_models():
 
 @bp.route("/autofill", methods=["POST", "OPTIONS"])
 @cross_origin(origins=["http://localhost:5173"], methods=["POST", "OPTIONS"])
-def autofill_model():
+@token_required
+def autofill_model(current_user):
     if request.method == "OPTIONS":
         return "", 200
 
@@ -175,6 +182,7 @@ def get_model_insights(id):
         return "", 200
 
     model = session.query(ModelEntry).get(id)
+    
     if not model:
         return jsonify(ApiResponseHandler.error("Model not found", 404)), 404
 
@@ -184,7 +192,8 @@ def get_model_insights(id):
 
 @bp.route("/insights/compare", methods=["POST", "OPTIONS"])
 @cross_origin(origins=["http://localhost:5173"], methods=["POST", "OPTIONS"])
-def compare_models():
+@token_required
+def compare_models(current_user):
     if request.method == "OPTIONS":
         return "", 200
     data = request.get_json()
@@ -194,7 +203,11 @@ def compare_models():
     if not model_ids:
         return jsonify(ApiResponseHandler.error("No model IDs provided", 400)), 400
 
-    models = session.query(ModelEntry).filter(ModelEntry.id.in_(model_ids)).all()
+    models = (
+        session.query(ModelEntry)
+        .filter(ModelEntry.id.in_(model_ids), ModelEntry.user_id == current_user.id)
+        .all()
+    )
     if not models:
         return jsonify(ApiResponseHandler.error("No models found", 404)), 404
 
