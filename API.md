@@ -245,23 +245,41 @@ All endpoints support CORS with the following configuration:
 
 ### Get Model Insights
 
-**GET /models/{id}/insights or OPTIONS /models/{id}/insights**
+**GET /models/{id}/insights or POST /models/{id}/insights or OPTIONS /models/{id}/insights**
 
 - Parameters:
   - `id`: Model ID (integer)
-- Response: RAG-generated insights about the model wrapped in standard format
+- Methods:
+  - GET: Returns default comprehensive insights
+  - POST: Returns tailored insights based on custom prompt
+    - Request Body:
+      ```json
+      {
+        "prompt": string  // Custom question or analysis request
+      }
+      ```
+- Response: AI-generated insights about the model wrapped in standard format
 
 ```json
 {
   "success": true,
   "data": {
-    "insights": string
+    "technical_analysis": string,    // Only in GET response
+    "use_cases": string,            // Only in GET response
+    "recommendations": string,       // Only in GET response
+    "custom_analysis": string       // Only in POST response with custom prompt
   },
   "message": "Model insights retrieved successfully",
   "error": null,
   "status_code": 200
 }
 ```
+
+Example custom prompts:
+
+- "What are the potential security risks of this model?"
+- "How can I optimize this model for mobile deployment?"
+- "Compare this model's architecture with BERT for text classification tasks"
 
 ### Compare Models
 

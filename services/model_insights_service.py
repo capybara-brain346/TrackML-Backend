@@ -11,45 +11,90 @@ class ModelInsightsService:
         self.client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
         self.model = "gemini-2.0-flash"
 
-    def generate_model_insights(self, model_data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_model_insights(
+        self, model_data: Dict[str, Any], custom_prompt: str = None
+    ) -> Dict[str, Any]:
         insights = {}
 
+        if custom_prompt:
+            context = self._prepare_context(model_data)
+            custom_prompt_with_context = f"""
+            Given this ML model context:
+            {context}
+            
+            User Question/Prompt:
+            {custom_prompt}
+            
+            Provide a detailed, specific, and actionable response focusing on the user's query.
+            """
+            insights["custom_analysis"] = self._generate_content(
+                custom_prompt_with_context
+            )
+            return insights
+
         tech_prompt = f"""
-        Based on this ML model information:
-        {model_data}
+        Based on this ML model context:
+        {self._prepare_context(model_data)}
         
-        Provide a technical analysis focusing on:
-        1. Architecture strengths and potential limitations
-        2. Computational requirements and optimization opportunities
-        3. Integration considerations and deployment recommendations
+        Provide a comprehensive technical analysis covering:
+        1. Architecture evaluation:
+           - Core architectural components
+           - Strengths and potential bottlenecks
+           - Scalability considerations
+        2. Performance optimization:
+           - Resource utilization
+           - Training and inference optimization opportunities
+           - Hardware requirements and recommendations
+        3. Implementation insights:
+           - Best practices for deployment
+           - Integration challenges and solutions
+           - Monitoring and maintenance strategies
         
-        Format as bullet points, be specific and concise.
+        Format as clear bullet points with specific, actionable insights.
         """
         insights["technical_analysis"] = self._generate_content(tech_prompt)
 
         use_case_prompt = f"""
-        Given this ML model's characteristics:
-        {model_data}
+        Based on this ML model context:
+        {self._prepare_context(model_data)}
         
-        Suggest:
-        1. Primary use cases
-        2. Industry applications
-        3. Potential innovative applications
+        Provide detailed insights on:
+        1. Primary use cases:
+           - Core applications with specific examples
+           - Target problems and scenarios
+           - Expected performance metrics
+        2. Industry applications:
+           - Sector-specific implementations
+           - Real-world success scenarios
+           - Industry-specific considerations
+        3. Innovation potential:
+           - Novel applications
+           - Cross-domain opportunities
+           - Future scaling possibilities
         
-        Format as bullet points, be specific and practical.
+        Format as clear bullet points with practical, implementable suggestions.
         """
         insights["use_cases"] = self._generate_content(use_case_prompt)
 
         rec_prompt = f"""
-        Based on this model's profile:
-        {model_data}
+        Based on this ML model context:
+        {self._prepare_context(model_data)}
         
-        Provide:
-        1. Best practices for implementation
-        2. Monitoring recommendations
-        3. Performance optimization tips
+        Provide detailed recommendations covering:
+        1. Implementation strategy:
+           - Step-by-step deployment guide
+           - Common pitfalls and solutions
+           - Integration best practices
+        2. Performance optimization:
+           - Resource optimization techniques
+           - Scaling strategies
+           - Cost-efficiency improvements
+        3. Monitoring and maintenance:
+           - Key metrics to track
+           - Performance indicators
+           - Maintenance schedule and checklist
         
-        Format as bullet points, focus on actionable advice.
+        Format as clear bullet points with specific, actionable steps.
         """
         insights["recommendations"] = self._generate_content(rec_prompt)
 
@@ -78,27 +123,38 @@ class ModelInsightsService:
             return "Error generating insights"
 
     def analyze_multiple_models(
-        self, models_data: List[Dict[str, Any]]
+        self, models_data: List[Dict[str, Any]], custom_prompt: str = None
     ) -> Dict[str, Any]:
         contexts = [str(model) for model in models_data]
         combined_context = "\n\n".join(contexts)
 
-        comparative_prompt = f"""
-        Based on these ML models:
-        {combined_context}
-        
-        Provide:
-        1. Comparative analysis of their strengths and weaknesses
-        2. Potential complementary use cases
-        3. Integration opportunities
-        4. Recommendations for which model to use in different scenarios
-        
-        Format as bullet points, focus on practical insights and clear distinctions between the models.
-        """
+        if custom_prompt:
+            prompt = f"""
+            Based on these ML models:
+            {combined_context}
+            
+            User Question/Prompt:
+            {custom_prompt}
+            
+            Provide a detailed, specific, and actionable response focusing on the user's query while comparing the models.
+            """
+        else:
+            prompt = f"""
+            Based on these ML models:
+            {combined_context}
+            
+            Provide:
+            1. Comparative analysis of their strengths and weaknesses
+            2. Potential complementary use cases
+            3. Integration opportunities
+            4. Recommendations for which model to use in different scenarios
+            
+            Format as bullet points, focus on practical insights and clear distinctions between the models.
+            """
 
         try:
             response = self.client.models.generate_content(
-                model=self.model, contents=comparative_prompt
+                model=self.model, contents=prompt
             )
             return {"comparative_analysis": response.text}
         except Exception as e:
