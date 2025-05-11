@@ -7,10 +7,11 @@ All API endpoints return responses in a standardized format:
 ```json
 {
   "success": boolean,
+  "message": string,
+  "statusCode": number,
+  "timestamp": string (ISO format),
   "data": any,
-  "message": string (optional),
-  "error": string (only if success is false),
-  "status_code": number
+  "error": string (only if success is false)
 }
 ```
 
@@ -20,439 +21,727 @@ All endpoints support CORS with the following configuration:
 
 - Allowed Origin: http://localhost:5173
 - Allowed Methods: GET, POST, PUT, DELETE, OPTIONS
+- Allowed Headers: Content-Type, Authorization
+- Credentials: true
 - All endpoints support OPTIONS preflight requests
 
-## Models
+## Authentication
 
-### Get All Models
+### Register User
 
-**GET /models/ or OPTIONS /models/**
+**POST /api/auth/register**
 
-- Returns a list of all models
-- Response: Array of model objects wrapped in standard format
+- Request Body:
 
 ```json
 {
-  "success": true,
-  "data": [
-    {
-      "id": integer,
-      "name": string,
-      "model_type": string,
-      "status": string,
-      "tags": array,
-      "date_interacted": string
-    }
-  ],
-  "message": "Models retrieved successfully",
-  "error": null,
-  "status_code": 200
+  "username": string,
+  "email": string,
+  "password": string
 }
 ```
 
-### Get Model by ID
-
-**GET /models/{id} or OPTIONS /models/{id}**
-
-- Parameters:
-  - `id`: Model ID (integer)
-- Response: Model object wrapped in standard format
-- Error (404): If model not found
+- Response (201):
 
 ```json
 {
   "success": true,
+  "message": "User registered successfully",
+  "statusCode": 201,
+  "timestamp": string,
   "data": {
-    "id": integer,
-    "name": string,
-    "model_type": string,
-    "status": string,
-    "tags": array,
-    "date_interacted": string
-  },
-  "message": "Model retrieved successfully",
-  "error": null,
-  "status_code": 200
+    "user": {
+      "id": integer,
+      "username": string,
+      "email": string,
+      "is_active": boolean,
+      "created_at": string,
+      "workspaces": array
+    }
+  }
 }
 ```
 
-### Create Model
+### Login
 
-**POST /models/ or OPTIONS /models/**
+**POST /api/auth/login**
+
+- Request Body:
+
+```json
+{
+  "username": string,
+  "password": string
+}
+```
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "statusCode": 200,
+  "timestamp": string,
+  "data": {
+    "token": string,
+    "user": {
+      "id": integer,
+      "username": string,
+      "email": string,
+      "is_active": boolean,
+      "created_at": string,
+      "workspaces": array
+    }
+  }
+}
+```
+
+### Verify Token
+
+**POST /api/auth/verify-token**
+
+- Request Body:
+
+```json
+{
+  "token": string
+}
+```
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Token verified successfully",
+  "statusCode": 200,
+  "timestamp": string,
+  "data": {
+    "user": {
+      "id": integer,
+      "username": string,
+      "email": string,
+      "is_active": boolean,
+      "created_at": string,
+      "workspaces": array
+    }
+  }
+}
+```
+
+### Change Password
+
+**POST /api/auth/change-password**
+
+- Request Body:
+
+```json
+{
+  "user_id": integer,
+  "old_password": string,
+  "new_password": string
+}
+```
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Password changed successfully",
+  "statusCode": 200,
+  "timestamp": string
+}
+```
+
+### Update User
+
+**PUT /api/auth/user/{user_id}**
+
+- Request Body:
+
+  - Any user fields to update
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "User updated successfully",
+  "statusCode": 200,
+  "timestamp": string,
+  "data": {
+    "user": {
+      "id": integer,
+      "username": string,
+      "email": string,
+      "is_active": boolean,
+      "created_at": string,
+      "workspaces": array
+    }
+  }
+}
+```
+
+### Delete User
+
+**DELETE /api/auth/user/{user_id}**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "User deactivated successfully",
+  "statusCode": 200,
+  "timestamp": string
+}
+```
+
+## Workspaces
+
+### Create Workspace
+
+**POST /api/workspaces**
+
+- Headers:
+
+  - `Authorization`: Bearer token
 
 - Request Body:
 
 ```json
 {
   "name": string,
-  "model_type": string,
-  "status": string,
-  "tags": array,
-  "date_interacted": string (ISO format)
+  "description": string (optional)
 }
 ```
 
-- Response: Created model object wrapped in standard format with status code 201
+- Response (201):
 
 ```json
 {
   "success": true,
+  "message": "Workspace created successfully",
+  "statusCode": 201,
+  "timestamp": string,
   "data": {
     "id": integer,
     "name": string,
+    "description": string,
+    "created_at": string,
+    "is_default": boolean,
+    "user_id": integer,
+    "models": array
+  }
+}
+```
+
+### Get User Workspaces
+
+**GET /api/workspaces**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Workspaces retrieved successfully",
+  "statusCode": 200,
+  "timestamp": string,
+  "data": [
+    {
+      "id": integer,
+      "name": string,
+      "description": string,
+      "created_at": string,
+      "is_default": boolean,
+      "user_id": integer,
+      "models": array
+    }
+  ]
+}
+```
+
+### Get Workspace by ID
+
+**GET /api/workspaces/{workspace_id}**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Workspace retrieved successfully",
+  "statusCode": 200,
+  "timestamp": string,
+  "data": {
+    "id": integer,
+    "name": string,
+    "description": string,
+    "created_at": string,
+    "is_default": boolean,
+    "user_id": integer,
+    "models": array
+  }
+}
+```
+
+### Update Workspace
+
+**PUT /api/workspaces/{workspace_id}**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Request Body:
+
+  - Any workspace fields to update
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Workspace updated successfully",
+  "statusCode": 200,
+  "timestamp": string,
+  "data": {
+    "id": integer,
+    "name": string,
+    "description": string,
+    "created_at": string,
+    "is_default": boolean,
+    "user_id": integer,
+    "models": array
+  }
+}
+```
+
+### Delete Workspace
+
+**DELETE /api/workspaces/{workspace_id}**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Response (204):
+
+```json
+{
+  "success": true,
+  "message": "Workspace deleted successfully",
+  "statusCode": 204,
+  "timestamp": string
+}
+```
+
+### Get Workspace Models
+
+**GET /api/workspaces/{workspace_id}/models**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Workspace models retrieved successfully",
+  "statusCode": 200,
+  "timestamp": string,
+  "data": [
+    {
+      "id": integer,
+      "name": string,
+      "developer": string,
+      "model_type": string,
+      "status": string,
+      "date_interacted": string,
+      "tags": array,
+      "notes": string,
+      "source_links": array,
+      "parameters": integer,
+      "license": string,
+      "version": string,
+      "user_id": integer,
+      "workspace_id": integer,
+      "username": string
+    }
+  ]
+}
+```
+
+### Add Model to Workspace
+
+**POST /api/workspaces/{workspace_id}/models/{model_id}**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Response (204):
+
+```json
+{
+  "success": true,
+  "message": "Model added to workspace successfully",
+  "statusCode": 204,
+  "timestamp": string
+}
+```
+
+### Move Model Between Workspaces
+
+**POST /api/workspaces/move-model**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Request Body:
+
+```json
+{
+  "model_id": integer,
+  "source_workspace_id": integer,
+  "target_workspace_id": integer
+}
+```
+
+- Response (204):
+
+```json
+{
+  "success": true,
+  "message": "Model moved successfully",
+  "statusCode": 204,
+  "timestamp": string
+}
+```
+
+## Models
+
+### Create Model
+
+**POST /api/models/models**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Request Body:
+
+```json
+{
+  "name": string (required),
+  "developer": string (optional),
+  "model_type": string (optional),
+  "status": string (optional),
+  "tags": array (optional),
+  "notes": string (optional),
+  "source_links": array (optional),
+  "parameters": integer (optional),
+  "license": string (optional),
+  "version": string (optional),
+  "workspace_id": integer (optional)
+}
+```
+
+- Response (201):
+
+```json
+{
+  "success": true,
+  "message": "Model created successfully",
+  "statusCode": 201,
+  "timestamp": string,
+  "data": {
+    "id": integer,
+    "name": string,
+    "developer": string,
     "model_type": string,
     "status": string,
+    "date_interacted": string,
     "tags": array,
-    "date_interacted": string
-  },
-  "message": "Model created successfully",
-  "error": null,
-  "status_code": 201
+    "notes": string,
+    "source_links": array,
+    "parameters": integer,
+    "license": string,
+    "version": string,
+    "user_id": integer,
+    "workspace_id": integer,
+    "username": string
+  }
+}
+```
+
+### Get Models
+
+**GET /api/models/models**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Query Parameters:
+
+  - `workspace_id`: Filter by workspace (integer, optional)
+  - `query`: Search query (string, optional)
+  - `model_type`: Filter by model type (string, optional)
+  - `tags`: Filter by tags (array, optional)
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Models retrieved successfully",
+  "statusCode": 200,
+  "timestamp": string,
+  "data": [
+    {
+      "id": integer,
+      "name": string,
+      "developer": string,
+      "model_type": string,
+      "status": string,
+      "date_interacted": string,
+      "tags": array,
+      "notes": string,
+      "source_links": array,
+      "parameters": integer,
+      "license": string,
+      "version": string,
+      "user_id": integer,
+      "workspace_id": integer,
+      "username": string
+    }
+  ]
+}
+```
+
+### Get Model by ID
+
+**GET /api/models/models/{model_id}**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Model retrieved successfully",
+  "statusCode": 200,
+  "timestamp": string,
+  "data": {
+    "id": integer,
+    "name": string,
+    "developer": string,
+    "model_type": string,
+    "status": string,
+    "date_interacted": string,
+    "tags": array,
+    "notes": string,
+    "source_links": array,
+    "parameters": integer,
+    "license": string,
+    "version": string,
+    "user_id": integer,
+    "workspace_id": integer,
+    "username": string
+  }
 }
 ```
 
 ### Update Model
 
-**PUT /models/{id} or OPTIONS /models/{id}**
+**PUT /api/models/models/{model_id}**
 
-- Parameters:
-  - `id`: Model ID (integer)
-- Request Body: Any model fields to update
-- Response: Updated model object wrapped in standard format
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Request Body:
+
+  - Any model fields to update
+
+- Response (200):
 
 ```json
 {
   "success": true,
+  "message": "Model updated successfully",
+  "statusCode": 200,
+  "timestamp": string,
   "data": {
     "id": integer,
     "name": string,
+    "developer": string,
     "model_type": string,
     "status": string,
+    "date_interacted": string,
     "tags": array,
-    "date_interacted": string
-  },
-  "message": "Model updated successfully",
-  "error": null,
-  "status_code": 200
+    "notes": string,
+    "source_links": array,
+    "parameters": integer,
+    "license": string,
+    "version": string,
+    "user_id": integer,
+    "workspace_id": integer,
+    "username": string
+  }
 }
 ```
 
 ### Delete Model
 
-**DELETE /models/{id} or OPTIONS /models/{id}**
-
-- Parameters:
-  - `id`: Model ID (integer)
-- Response:
-  - Status code: 204
-  - Body: Standard format with `data: null` and success message
-
-```json
-{
-  "success": true,
-  "data": null,
-  "message": "Model deleted successfully",
-  "error": null,
-  "status_code": 204
-}
-```
-
-### Search Models
-
-**GET /models/search or OPTIONS /models/search**
-
-- Query Parameters:
-  - `q`: Search query (string)
-  - `type`: Model type filter
-  - `status`: Status filter
-  - `tag`: Tag filter
-- Response: Array of matching model objects wrapped in standard format
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": integer,
-      "name": string,
-      "model_type": string,
-      "status": string,
-      "tags": array,
-      "date_interacted": string
-    }
-  ],
-  "message": "Models retrieved successfully",
-  "error": null,
-  "status_code": 200
-}
-```
-
-### Semantic Search Models
-
-**GET /models/semantic-search or OPTIONS /models/semantic-search**
-
-- Query Parameters:
-  - `q`: Search query (string) - Required. The text to search for semantically similar models.
-- Response: Array of matching model objects with relevance scores wrapped in standard format
-- Errors:
-  - 400: Search query is required
-  - 500: Server error (e.g. embedding service unavailable)
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": integer,
-      "name": string,
-      "model_type": string,
-      "status": string,
-      "tags": array,
-      "date_interacted": string,
-      "relevance_score": float
-    }
-  ],
-  "message": "Models retrieved successfully",
-  "error": null,
-  "status_code": 200
-}
-```
-
-### Autofill Model
-
-**POST /models/autofill or OPTIONS /models/autofill**
-
-- Request Body (multipart/form-data):
-
-  - `model_id`: string - ID of the model to autofill information for
-  - `model_links[]`: array of strings - Optional list of URLs containing model information
-  - `files[]`: array of files - Optional PDF and DOC/DOCX files containing model information
-
-- Response:
-
-```json
-{
-  "success": boolean,
-  "data": {
-    "response": string
-  },
-  "status_code": number
-}
-```
-
-- Note: Files are temporarily stored and automatically cleaned up after processing
-- Supported file types: PDF (.pdf), Word documents (.doc, .docx)
-
-### Get Model Insights
-
-**GET /models/{id}/insights or POST /models/{id}/insights or OPTIONS /models/{id}/insights**
-
-- Parameters:
-  - `id`: Model ID (integer)
-- Methods:
-  - GET: Returns default comprehensive insights
-  - POST: Returns tailored insights based on custom prompt
-    - Request Body:
-      ```json
-      {
-        "prompt": string  // Custom question or analysis request
-      }
-      ```
-- Response: AI-generated insights about the model wrapped in standard format
-
-```json
-{
-  "success": true,
-  "data": {
-    "technical_analysis": string,    // Only in GET response
-    "use_cases": string,            // Only in GET response
-    "recommendations": string,       // Only in GET response
-    "custom_analysis": string       // Only in POST response with custom prompt
-  },
-  "message": "Model insights retrieved successfully",
-  "error": null,
-  "status_code": 200
-}
-```
-
-Example custom prompts:
-
-- "What are the potential security risks of this model?"
-- "How can I optimize this model for mobile deployment?"
-- "Compare this model's architecture with BERT for text classification tasks"
-
-### Compare Models
-
-**POST /models/insights/compare or OPTIONS /models/insights/compare**
-
-- Request Body:
-
-```json
-{
-  "model_ids": array[integer]
-}
-```
-
-- Response: RAG-generated comparative analysis wrapped in standard format
-- Errors:
-  - 400: No model IDs provided
-  - 404: No models found
-
-```json
-{
-  "success": true,
-  "data": {
-    "analysis": string
-  },
-  "message": "Model comparison analysis retrieved successfully",
-  "error": null,
-  "status_code": 200
-}
-```
-
-## Authentication
-
-### Register User
-
-**POST /auth/register or OPTIONS /auth/register**
-
-- Request Body:
-
-```json
-{
-  "username": string,
-  "email": string,
-  "password": string
-}
-```
-
-- Response: Created user object wrapped in standard format with status code 201
-
-```json
-{
-  "success": true,
-  "data": {
-    "token": string,
-    "user": {
-      "id": integer,
-      "username": string,
-      "email": string,
-      "is_active": boolean
-    }
-  },
-  "message": "User registered successfully",
-  "error": null,
-  "status_code": 201
-}
-```
-
-### Login
-
-**POST /auth/login or OPTIONS /auth/login**
-
-- Request Body:
-
-```json
-{
-  "email": string,
-  "password": string
-}
-```
-
-- Response: User object with auth token wrapped in standard format
-
-```json
-{
-  "success": true,
-  "data": {
-    "token": string,
-    "user": {
-      "id": integer,
-      "username": string,
-      "email": string,
-      "is_active": boolean
-    }
-  },
-  "message": "User logged in successfully",
-  "error": null,
-  "status_code": 200
-}
-```
-
-### Verify Token
-
-**GET /auth/verify-token or OPTIONS /auth/verify-token**
+**DELETE /api/models/models/{model_id}**
 
 - Headers:
+
   - `Authorization`: Bearer token
-- Response: User object wrapped in standard format
+
+- Response (204):
 
 ```json
 {
   "success": true,
-  "data": {
-    "user": {
-      "id": integer,
-      "username": string,
-      "email": string,
-      "is_active": boolean
-    }
-  },
-  "message": "Token verified successfully",
-  "error": null,
-  "status_code": 200
+  "message": "Model deleted successfully",
+  "statusCode": 204,
+  "timestamp": string
 }
 ```
 
-### Update User
+### Update Model Tags
 
-**PUT /auth/user/{id} or OPTIONS /auth/user/{id}**
+**PUT /api/models/models/{model_id}/tags**
 
-- Parameters:
-  - `id`: User ID (integer)
-- Request Body (all fields optional):
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Request Body:
 
 ```json
 {
-  "username": string,
-  "email": string,
-  "password": string,
-  "is_active": boolean
+  "tags": array
 }
 ```
 
-- Response: Updated user object wrapped in standard format
+- Response (200):
 
 ```json
 {
   "success": true,
+  "message": "Tags updated successfully",
+  "statusCode": 200,
+  "timestamp": string,
   "data": {
     "id": integer,
-    "username": string,
-    "email": string,
-    "is_active": boolean
-  },
-  "message": "User updated successfully",
-  "error": null,
-  "status_code": 200
+    "name": string,
+    "developer": string,
+    "model_type": string,
+    "status": string,
+    "date_interacted": string,
+    "tags": array,
+    "notes": string,
+    "source_links": array,
+    "parameters": integer,
+    "license": string,
+    "version": string,
+    "user_id": integer,
+    "workspace_id": integer,
+    "username": string
+  }
 }
 ```
 
-### Delete User
+### Get Model Types
 
-**DELETE /auth/user/{id} or OPTIONS /auth/user/{id}**
+**GET /api/models/models/types**
 
-- Parameters:
-  - `id`: User ID (integer)
-- Response: Success message wrapped in standard format
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Response (200):
 
 ```json
 {
   "success": true,
-  "data": null,
-  "message": "User deactivated successfully",
-  "error": null,
-  "status_code": 200
+  "message": "Model types retrieved successfully",
+  "statusCode": 200,
+  "timestamp": string,
+  "data": array[string]
+}
+```
+
+### Get All Tags
+
+**GET /api/models/models/tags**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Tags retrieved successfully",
+  "statusCode": 200,
+  "timestamp": string,
+  "data": array[string]
+}
+```
+
+### Bulk Update Workspace
+
+**POST /api/models/models/bulk-workspace-update**
+
+- Headers:
+
+  - `Authorization`: Bearer token
+
+- Request Body:
+
+```json
+{
+  "model_ids": array[integer],
+  "target_workspace_id": integer
+}
+```
+
+- Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Successfully moved models to workspace",
+  "statusCode": 200,
+  "timestamp": string
 }
 ```
 
@@ -466,10 +755,16 @@ Example custom prompts:
 - 404: Not Found
 - 500: Server Error
 
-## CORS Response Headers
+## Error Response Format
 
-All responses include the following CORS headers:
+All error responses follow this format:
 
-- Access-Control-Allow-Origin: http://localhost:5173
-- Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
-- Access-Control-Allow-Headers: Content-Type, Authorization
+```json
+{
+  "success": false,
+  "message": string,
+  "statusCode": number,
+  "timestamp": string,
+  "error": string (optional)
+}
+```

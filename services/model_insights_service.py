@@ -2,6 +2,7 @@ import os
 from typing import Dict, Any, List
 from google import genai
 from dotenv import load_dotenv
+from models.models import ModelEntry, session
 
 load_dotenv()
 
@@ -108,6 +109,7 @@ class ModelInsightsService:
             f"Parameters: {model_data.get('parameters', 'N/A')}",
             f"Tags: {', '.join(model_data.get('tags', []))}",
             f"Notes: {model_data.get('notes', 'N/A')}",
+            f"Workspace: {model_data.get('workspace_name', 'N/A')}",
         ]
 
         return "\n".join(context_parts)
@@ -125,7 +127,13 @@ class ModelInsightsService:
     def analyze_multiple_models(
         self, models_data: List[Dict[str, Any]], custom_prompt: str = None
     ) -> Dict[str, Any]:
-        contexts = [str(model) for model in models_data]
+        contexts = []
+        for model in models_data:
+            model_entry = session.query(ModelEntry).filter_by(id=model["id"]).first()
+            if model_entry and model_entry.workspace:
+                model["workspace_name"] = model_entry.workspace.name
+            contexts.append(str(model))
+
         combined_context = "\n\n".join(contexts)
 
         if custom_prompt:

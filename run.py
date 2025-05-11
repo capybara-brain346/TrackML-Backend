@@ -2,6 +2,7 @@ from models.models import Base, engine
 from config import Config
 from flask import Flask, request, make_response
 from flask_cors import CORS
+from routes.workspace_routes import workspace_bp
 
 
 def create_app(config_class=Config):
@@ -37,8 +38,9 @@ def create_app(config_class=Config):
     from routes.model_routes import bp as models_bp
     from routes.auth_routes import bp as auth_bp
 
-    app.register_blueprint(models_bp, url_prefix="/api/v1/models")
+    app.register_blueprint(models_bp, url_prefix="/api/v1")
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
+    app.register_blueprint(workspace_bp, url_prefix="/api/v1")
 
     return app
 
