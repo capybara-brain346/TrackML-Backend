@@ -190,7 +190,6 @@ python-iso639
 python-magic
 python-multipart
 python-oxmsg
-pywin32
 PyYAML
 pyzmq
 rank-bm25
