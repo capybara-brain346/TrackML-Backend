@@ -175,13 +175,14 @@ def autofill_model(current_user):
         return jsonify(ApiResponseHandler.error(str(e), 500)), 500
 
 
-@bp.route("/<int:id>/insights", methods=["GET", "OPTIONS"])
-@cross_origin(origins=["http://localhost:5173"], methods=["GET", "OPTIONS"])
-@token_required
-def get_model_insights(current_user, id):
+@bp.route("/<int:id>/insights", methods=["GET", "POST", "OPTIONS"])
+@cross_origin(origins=["http://localhost:5173"], methods=["GET", "POST", "OPTIONS"])
+def get_model_insights(id):
     if request.method == "OPTIONS":
         return "", 200
-    model = session.query(ModelEntry).filter_by(id=id, user_id=current_user.id).first()
+
+    model = session.query(ModelEntry).get(id)
+    
     if not model:
         return jsonify(ApiResponseHandler.error("Model not found", 404)), 404
 
@@ -197,6 +198,7 @@ def compare_models(current_user):
         return "", 200
     data = request.get_json()
     model_ids = data.get("model_ids", [])
+    custom_prompt = data.get("prompt")
 
     if not model_ids:
         return jsonify(ApiResponseHandler.error("No model IDs provided", 400)), 400
@@ -210,7 +212,7 @@ def compare_models(current_user):
         return jsonify(ApiResponseHandler.error("No models found", 404)), 404
 
     analysis = model_insights_service.analyze_multiple_models(
-        [model.to_dict() for model in models]
+        [model.to_dict() for model in models], custom_prompt
     )
     return jsonify(ApiResponseHandler.success(analysis))
 
