@@ -18,7 +18,7 @@ All API endpoints return responses in a standardized format:
 
 All endpoints support CORS with the following configuration:
 
-- Allowed Origin: http://localhost:5173
+- Allowed Origin: https://trackml-frontend.onrender.com
 - Allowed Methods: GET, POST, PUT, DELETE, OPTIONS
 - All endpoints support OPTIONS preflight requests
 
@@ -470,6 +470,6 @@ Example custom prompts:
 
 All responses include the following CORS headers:
 
-- Access-Control-Allow-Origin: http://localhost:5173
+- Access-Control-Allow-Origin: https://trackml-frontend.onrender.com
 - Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
 - Access-Control-Allow-Headers: Content-Type, Authorization

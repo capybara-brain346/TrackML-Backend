@@ -15,7 +15,7 @@ CORS(
     bp,
     resources={
         r"/*": {
-            "origins": ["http://localhost:5173"],
+            "origins": ["https://trackml-frontend.onrender.com"],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         }
     },
@@ -44,7 +44,9 @@ def token_required(f):
 
 
 @bp.route("/register", methods=["POST", "OPTIONS"])
-@cross_origin(origins=["http://localhost:5173"], methods=["POST", "OPTIONS"])
+@cross_origin(
+    origins=["https://trackml-frontend.onrender.com"], methods=["POST", "OPTIONS"]
+)
 def register_user():
     if request.method == "OPTIONS":
         return "", 200
@@ -82,7 +84,9 @@ def register_user():
 
 
 @bp.route("/login", methods=["POST", "OPTIONS"])
-@cross_origin(origins=["http://localhost:5173"], methods=["POST", "OPTIONS"])
+@cross_origin(
+    origins=["https://trackml-frontend.onrender.com"], methods=["POST", "OPTIONS"]
+)
 def login():
     if request.method == "OPTIONS":
         return "", 200
@@ -108,14 +112,18 @@ def login():
 
 
 @bp.route("/verify-token", methods=["GET", "OPTIONS"])
-@cross_origin(origins=["http://localhost:5173"], methods=["GET", "OPTIONS"])
+@cross_origin(
+    origins=["https://trackml-frontend.onrender.com"], methods=["GET", "OPTIONS"]
+)
 @token_required
 def verify_token(current_user):
     return jsonify(ApiResponseHandler.success({"user": current_user.to_dict()})), 200
 
 
 @bp.route("/user/<int:user_id>", methods=["PUT", "OPTIONS"])
-@cross_origin(origins=["http://localhost:5173"], methods=["PUT", "OPTIONS"])
+@cross_origin(
+    origins=["https://trackml-frontend.onrender.com"], methods=["PUT", "OPTIONS"]
+)
 @token_required
 def update_user(current_user, user_id):
     if request.method == "OPTIONS":
@@ -161,7 +169,9 @@ def update_user(current_user, user_id):
 
 
 @bp.route("/user/<int:user_id>", methods=["DELETE", "OPTIONS"])
-@cross_origin(origins=["http://localhost:5173"], methods=["DELETE", "OPTIONS"])
+@cross_origin(
+    origins=["https://trackml-frontend.onrender.com"], methods=["DELETE", "OPTIONS"]
+)
 @token_required
 def delete_user(current_user, user_id):
     if request.method == "OPTIONS":
