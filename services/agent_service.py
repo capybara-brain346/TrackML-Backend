@@ -1,12 +1,16 @@
 import os
-from typing import List, Optional
+from typing import List, Optional, Any
 from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.document_loaders import WebBaseLoader
+from langchain_community.document_loaders import (
+    WebBaseLoader,
+    PyPDFLoader,
+    UnstructuredWordDocumentLoader,
+)
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_groq import ChatGroq
@@ -17,9 +21,15 @@ load_dotenv()
 
 
 class AgentService:
-    def __init__(self, model_id: str, model_links: Optional[List[str]] = None):
+    def __init__(
+        self,
+        model_id: str,
+        model_links: Optional[List[str]] = None,
+        doc_paths: Optional[List[str]] = None,
+    ):
         self.model_id = model_id
         self.provided_links = model_links or []
+        self.doc_paths = doc_paths or []
 
         self.embeddings = HuggingFaceEmbeddings(
             model_name="BAAI/bge-small-en-v1.5", model_kwargs={"device": "cpu"}
@@ -47,6 +57,22 @@ class AgentService:
                 raise Exception(f"Error in web search: {str(e)}")
 
         return self.provided_links
+
+    def _load_local_documents(self) -> List[Any]:
+        documents = []
+        for path in self.doc_paths:
+            try:
+                ext = os.path.splitext(path)[1].lower()
+                if ext == ".pdf":
+                    loader = PyPDFLoader(path)
+                elif ext in [".doc", ".docx"]:
+                    loader = UnstructuredWordDocumentLoader(path)
+                else:
+                    continue
+                documents.extend(loader.load())
+            except Exception as e:
+                print(f"Error loading document {path}: {str(e)}")
+        return documents
 
     def _create_vectorstore(self, documents) -> FAISS:
         text_splitter = RecursiveCharacterTextSplitter(
@@ -101,12 +127,18 @@ class AgentService:
     def run_agent(self) -> str:
         try:
             links = self._search_web()
+            documents = []
 
-            loader = WebBaseLoader(links)
-            documents = loader.load()
+            if links:
+                web_loader = WebBaseLoader(links)
+                documents.extend(web_loader.load())
+
+            documents.extend(self._load_local_documents())
+
+            if not documents:
+                raise ValueError("No documents were successfully loaded")
 
             vectorstore = self._create_vectorstore(documents)
-
             chain = self._setup_rag_pipeline(vectorstore)
             response = chain.invoke(self.model_id)
 
@@ -123,6 +155,10 @@ if __name__ == "__main__":
             "https://huggingface.co/meta-llama/Llama-3.2-1B",
             "https://ollama.com/library/llama3.2",
             "https://ai.meta.com/blog/llama-3-2-connect-2024-vision-edge-mobile-devices/",
+        ],
+        [
+            "local_docs/model_specs.pdf",
+            "local_docs/technical_overview.docx",
         ],
     )
     print(agent.run_agent())

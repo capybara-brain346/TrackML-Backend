@@ -1,5 +1,19 @@
 # TrackML API Documentation
 
+## Response Format
+
+All API endpoints return responses in a standardized format:
+
+```json
+{
+  "success": boolean,
+  "data": any,
+  "message": string (optional),
+  "error": string (only if success is false),
+  "status_code": number
+}
+```
+
 ## CORS Support
 
 All endpoints support CORS with the following configuration:
@@ -12,36 +26,59 @@ All endpoints support CORS with the following configuration:
 
 ### Get All Models
 
-**GET / or OPTIONS /**
+**GET /models/ or OPTIONS /models/**
 
 - Returns a list of all models
-- Response: Array of model objects
+- Response: Array of model objects wrapped in standard format
 
 ```json
-[
-  {
+{
+  "success": true,
+  "data": [
+    {
+      "id": integer,
+      "name": string,
+      "model_type": string,
+      "status": string,
+      "tags": array,
+      "date_interacted": string
+    }
+  ],
+  "message": "Models retrieved successfully",
+  "error": null,
+  "status_code": 200
+}
+```
+
+### Get Model by ID
+
+**GET /models/{id} or OPTIONS /models/{id}**
+
+- Parameters:
+  - `id`: Model ID (integer)
+- Response: Model object wrapped in standard format
+- Error (404): If model not found
+
+```json
+{
+  "success": true,
+  "data": {
     "id": integer,
     "name": string,
     "model_type": string,
     "status": string,
     "tags": array,
     "date_interacted": string
-  }
-]
+  },
+  "message": "Model retrieved successfully",
+  "error": null,
+  "status_code": 200
+}
 ```
-
-### Get Model by ID
-
-**GET /{id} or OPTIONS /{id}**
-
-- Parameters:
-  - `id`: Model ID (integer)
-- Response: Model object
-- Error (404): If model not found
 
 ### Create Model
 
-**POST / or OPTIONS /**
+**POST /models/ or OPTIONS /models/**
 
 - Request Body:
 
@@ -55,65 +92,149 @@ All endpoints support CORS with the following configuration:
 }
 ```
 
-- Response: Created model object (201)
+- Response: Created model object wrapped in standard format with status code 201
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": integer,
+    "name": string,
+    "model_type": string,
+    "status": string,
+    "tags": array,
+    "date_interacted": string
+  },
+  "message": "Model created successfully",
+  "error": null,
+  "status_code": 201
+}
+```
 
 ### Update Model
 
-**PUT /{id} or OPTIONS /{id}**
+**PUT /models/{id} or OPTIONS /models/{id}**
 
 - Parameters:
   - `id`: Model ID (integer)
 - Request Body: Any model fields to update
-- Response: Updated model object
-- Error (404): If model not found
+- Response: Updated model object wrapped in standard format
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": integer,
+    "name": string,
+    "model_type": string,
+    "status": string,
+    "tags": array,
+    "date_interacted": string
+  },
+  "message": "Model updated successfully",
+  "error": null,
+  "status_code": 200
+}
+```
 
 ### Delete Model
 
-**DELETE /{id} or OPTIONS /{id}**
+**DELETE /models/{id} or OPTIONS /models/{id}**
 
 - Parameters:
   - `id`: Model ID (integer)
-- Response: Empty (204)
-- Error (404): If model not found
+- Response:
+  - Status code: 204
+  - Body: Standard format with `data: null` and success message
+
+```json
+{
+  "success": true,
+  "data": null,
+  "message": "Model deleted successfully",
+  "error": null,
+  "status_code": 204
+}
+```
 
 ### Search Models
 
-**GET /search or OPTIONS /search**
+**GET /models/search or OPTIONS /models/search**
 
 - Query Parameters:
   - `q`: Search query (string)
   - `type`: Model type filter
   - `status`: Status filter
   - `tag`: Tag filter
-- Response: Array of matching model objects
-
-### Autofill Model
-
-**POST /autofill or OPTIONS /autofill**
-
-- Request Body:
+- Response: Array of matching model objects wrapped in standard format
 
 ```json
 {
-  "model_id": string,
-  "model_links": array[string]
+  "success": true,
+  "data": [
+    {
+      "id": integer,
+      "name": string,
+      "model_type": string,
+      "status": string,
+      "tags": array,
+      "date_interacted": string
+    }
+  ],
+  "message": "Models retrieved successfully",
+  "error": null,
+  "status_code": 200
 }
 ```
 
-- Response: Agent-generated model information
+### Autofill Model
+
+**POST /models/autofill or OPTIONS /models/autofill**
+
+- Request Body (multipart/form-data):
+
+  - `model_id`: string - ID of the model to autofill information for
+  - `model_links[]`: array of strings - Optional list of URLs containing model information
+  - `files[]`: array of files - Optional PDF and DOC/DOCX files containing model information
+
+- Response:
+
+```json
+{
+  "success": boolean,
+  "data": {
+    "response": string
+  },
+  "status_code": number
+}
+```
+
+- Note: Files are temporarily stored and automatically cleaned up after processing
+- Supported file types: PDF (.pdf), Word documents (.doc, .docx)
 
 ### Get Model Insights
 
-**GET /{id}/insights or OPTIONS /{id}/insights**
+**GET /models/{id}/insights or OPTIONS /models/{id}/insights**
 
 - Parameters:
   - `id`: Model ID (integer)
-- Response: RAG-generated insights about the model
-- Error (404): If model not found
+- Response: RAG-generated insights about the model wrapped in standard format
+
+```json
+{
+  "success": true,
+  "data": {
+    "insights": string
+  },
+  "message": "Model insights retrieved successfully",
+  "error": null,
+  "status_code": 200
+}
+```
 
 ### Compare Models
 
-**POST /insights/compare or OPTIONS /insights/compare**
+**POST /models/insights/compare or OPTIONS /models/insights/compare**
 
 - Request Body:
 
@@ -123,10 +244,22 @@ All endpoints support CORS with the following configuration:
 }
 ```
 
-- Response: RAG-generated comparative analysis
+- Response: RAG-generated comparative analysis wrapped in standard format
 - Errors:
   - 400: No model IDs provided
   - 404: No models found
+
+```json
+{
+  "success": true,
+  "data": {
+    "analysis": string
+  },
+  "message": "Model comparison analysis retrieved successfully",
+  "error": null,
+  "status_code": 200
+}
+```
 
 ## Authentication
 
@@ -144,10 +277,25 @@ All endpoints support CORS with the following configuration:
 }
 ```
 
-- Response: Created user object (201)
-- Errors:
-  - 400: Missing fields or duplicate username/email
-  - 500: Server error
+- Response: Created user object wrapped in standard format with status code 201
+
+```json
+{
+  "success": true,
+  "data": {
+    "token": string,
+    "user": {
+      "id": integer,
+      "username": string,
+      "email": string,
+      "is_active": boolean
+    }
+  },
+  "message": "User registered successfully",
+  "error": null,
+  "status_code": 201
+}
+```
 
 ### Login
 
@@ -162,10 +310,25 @@ All endpoints support CORS with the following configuration:
 }
 ```
 
-- Response: User object with auth token
-- Errors:
-  - 400: Missing fields
-  - 401: Invalid credentials
+- Response: User object with auth token wrapped in standard format
+
+```json
+{
+  "success": true,
+  "data": {
+    "token": string,
+    "user": {
+      "id": integer,
+      "username": string,
+      "email": string,
+      "is_active": boolean
+    }
+  },
+  "message": "User logged in successfully",
+  "error": null,
+  "status_code": 200
+}
+```
 
 ### Verify Token
 
@@ -173,9 +336,24 @@ All endpoints support CORS with the following configuration:
 
 - Headers:
   - `Authorization`: Bearer token
-- Response: User object
-- Errors:
-  - 401: Missing or invalid token
+- Response: User object wrapped in standard format
+
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": integer,
+      "username": string,
+      "email": string,
+      "is_active": boolean
+    }
+  },
+  "message": "Token verified successfully",
+  "error": null,
+  "status_code": 200
+}
+```
 
 ### Update User
 
@@ -194,10 +372,22 @@ All endpoints support CORS with the following configuration:
 }
 ```
 
-- Response: Updated user object
-- Errors:
-  - 404: User not found
-  - 400: Duplicate username/email
+- Response: Updated user object wrapped in standard format
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": integer,
+    "username": string,
+    "email": string,
+    "is_active": boolean
+  },
+  "message": "User updated successfully",
+  "error": null,
+  "status_code": 200
+}
+```
 
 ### Delete User
 
@@ -205,10 +395,17 @@ All endpoints support CORS with the following configuration:
 
 - Parameters:
   - `id`: User ID (integer)
-- Response: Success message
-- Errors:
-  - 404: User not found
-  - 500: Server error
+- Response: Success message wrapped in standard format
+
+```json
+{
+  "success": true,
+  "data": null,
+  "message": "User deactivated successfully",
+  "error": null,
+  "status_code": 200
+}
+```
 
 ## Common HTTP Status Codes
 

@@ -183,3 +183,7 @@ langchain-groq>=0.0.3
 faiss-cpu>=1.7.4
 sentence-transformers>=2.2.2
 transformers>=4.36.0
+pypdf
+python-docx
+unstructured
+pdf2image
