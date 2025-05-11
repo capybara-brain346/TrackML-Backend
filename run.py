@@ -12,7 +12,7 @@ def create_app(config_class=Config):
         app,
         resources={
             r"/api/v1/*": {
-                "origins": ["https://trackml-frontend.onrender.com"],
+                "origins": ["http://localhost:3000"],
                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization"],
                 "supports_credentials": True,
@@ -24,9 +24,7 @@ def create_app(config_class=Config):
     def handle_preflight():
         if request.method == "OPTIONS":
             response = make_response()
-            response.headers.add(
-                "Access-Control-Allow-Origin", "https://trackml-frontend.onrender.com"
-            )
+            response.headers.add("Access-Control-Allow-Origin", "http://localhost:3000")
             response.headers.add(
                 "Access-Control-Allow-Headers", "Content-Type,Authorization"
             )
@@ -49,4 +47,4 @@ app = create_app()
 Base.metadata.create_all(engine)
 
 if __name__ == "__main__":
-    app.run(debug=True, port=10000, host="0.0.0.0")
+    app.run(debug=True, port=5000)

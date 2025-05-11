@@ -2,7 +2,7 @@ flask
 flask_cors
 python-dotenv
 sqlalchemy
-jwt
+PyJWT
 langchain
 langchain_core
 langchain_community
