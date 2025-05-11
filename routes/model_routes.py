@@ -5,6 +5,7 @@ from models.models import ModelEntry, session
 from datetime import datetime
 from services.agent_service import AgentService
 from services.model_insights_service import ModelInsightsService
+from services.semantic_search_service import SemanticSearchService
 from flask_cors import cross_origin, CORS
 from api_typing.typing import ApiResponseHandler
 
@@ -21,6 +22,7 @@ CORS(
 )
 
 model_insights_service = ModelInsightsService()
+semantic_search_service = SemanticSearchService()
 
 
 @bp.route("/", methods=["GET", "OPTIONS"])
@@ -153,7 +155,7 @@ def autofill_model():
         for file_path in file_paths:
             try:
                 os.remove(file_path)
-            except:
+            except Exception:
                 pass
 
         return jsonify(ApiResponseHandler.success({"response": agent_response})), 200
@@ -161,7 +163,7 @@ def autofill_model():
         for file_path in file_paths:
             try:
                 os.remove(file_path)
-            except:
+            except Exception:
                 pass
         return jsonify(ApiResponseHandler.error(str(e), 500)), 500
 
@@ -198,3 +200,20 @@ def compare_models():
         [model.to_dict() for model in models]
     )
     return jsonify(ApiResponseHandler.success(analysis))
+
+
+@bp.route("/semantic-search", methods=["GET", "OPTIONS"])
+@cross_origin(origins=["http://localhost:5173"], methods=["GET", "OPTIONS"])
+def semantic_search():
+    if request.method == "OPTIONS":
+        return "", 200
+
+    query = request.args.get("q", "")
+    if not query:
+        return jsonify(ApiResponseHandler.error("Search query is required", 400)), 400
+
+    try:
+        results = semantic_search_service.search(query)
+        return jsonify(ApiResponseHandler.success(results))
+    except Exception as e:
+        return jsonify(ApiResponseHandler.error(str(e), 500)), 500
