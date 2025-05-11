@@ -187,6 +187,37 @@ All endpoints support CORS with the following configuration:
 }
 ```
 
+### Semantic Search Models
+
+**GET /models/semantic-search or OPTIONS /models/semantic-search**
+
+- Query Parameters:
+  - `q`: Search query (string) - Required. The text to search for semantically similar models.
+- Response: Array of matching model objects with relevance scores wrapped in standard format
+- Errors:
+  - 400: Search query is required
+  - 500: Server error (e.g. embedding service unavailable)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": integer,
+      "name": string,
+      "model_type": string,
+      "status": string,
+      "tags": array,
+      "date_interacted": string,
+      "relevance_score": float
+    }
+  ],
+  "message": "Models retrieved successfully",
+  "error": null,
+  "status_code": 200
+}
+```
+
 ### Autofill Model
 
 **POST /models/autofill or OPTIONS /models/autofill**
