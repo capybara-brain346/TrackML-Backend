@@ -1,5 +1,4 @@
 import os
-import google.generativeai as genai
 from google import genai
 import numpy as np
 from typing import List, Dict

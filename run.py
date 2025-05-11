@@ -2,7 +2,6 @@ from models.models import Base, engine
 from config import Config
 from flask import Flask, request, make_response
 from flask_cors import CORS
-from asgiref.wsgi import WsgiToAsgi
 
 
 def create_app(config_class=Config):
@@ -46,13 +45,8 @@ def create_app(config_class=Config):
     return app
 
 
-flask_app = create_app()
+app = create_app()
 Base.metadata.create_all(engine)
-app = WsgiToAsgi(flask_app)
 
 if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(
-        "run:app", host="0.0.0.0", port=5000, workers=4, log_level="info", reload=False
-    )
+    app.run(debug=True, port=5000, host="0.0.0.0")
