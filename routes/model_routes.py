@@ -1,10 +1,13 @@
+import os
 from flask import Blueprint, request, jsonify
+from werkzeug.utils import secure_filename
 from models.models import ModelEntry, session
 from datetime import datetime
-from services.model_extractor_service import ModelExtractor
 from services.agent_service import AgentService
-from services.rag_service import RAGService
+from services.model_insights_service import ModelInsightsService
+from services.semantic_search_service import SemanticSearchService
 from flask_cors import cross_origin, CORS
+from api_typing.typing import ApiResponseHandler
 from routes.auth_routes import token_required
 
 bp = Blueprint("models", __name__, url_prefix="/models")
@@ -18,8 +21,8 @@ CORS(
     },
 )
 
-model_extractor = ModelExtractor()
-rag_service = RAGService()
+model_insights_service = ModelInsightsService()
+semantic_search_service = SemanticSearchService()
 
 
 @bp.route("/", methods=["GET", "OPTIONS"])
@@ -28,9 +31,8 @@ rag_service = RAGService()
 def get_models(current_user):
     if request.method == "OPTIONS":
         return "", 200
-    models = session.query(ModelEntry).filter_by(user_id=current_user.id).all()
-    return jsonify([model.to_dict() for model in models])
-
+    models = session.query(ModelEntry).all()
+    return jsonify(ApiResponseHandler.success([model.to_dict() for model in models]))
 
 @bp.route("/<int:id>", methods=["GET", "OPTIONS"])
 @cross_origin(origins=["http://localhost:5173"], methods=["GET", "OPTIONS"])
@@ -40,8 +42,8 @@ def get_model(current_user, id):
         return "", 200
     model = session.query(ModelEntry).filter_by(id=id, user_id=current_user.id).first()
     if not model:
-        return {"error": "Model not found"}, 404
-    return jsonify(model.to_dict())
+        return jsonify(ApiResponseHandler.error("Model not found", 404)), 404
+    return jsonify(ApiResponseHandler.success(model.to_dict()))
 
 
 @bp.route("/", methods=["POST", "OPTIONS"])
@@ -58,7 +60,7 @@ def create_model(current_user):
     model = ModelEntry(**data)
     session.add(model)
     session.commit()
-    return jsonify(model.to_dict()), 201
+    return jsonify(ApiResponseHandler.success(model.to_dict(), status_code=201)), 201
 
 
 @bp.route("/<int:id>", methods=["PUT", "OPTIONS"])
@@ -69,7 +71,7 @@ def update_model(current_user, id):
         return "", 200
     model = session.query(ModelEntry).filter_by(id=id, user_id=current_user.id).first()
     if not model:
-        return {"error": "Model not found"}, 404
+        return jsonify(ApiResponseHandler.error("Model not found", 404)), 404
 
     data = request.get_json()
     if "date_interacted" in data and data["date_interacted"]:
@@ -79,7 +81,7 @@ def update_model(current_user, id):
         setattr(model, key, value)
 
     session.commit()
-    return jsonify(model.to_dict())
+    return jsonify(ApiResponseHandler.success(model.to_dict()))
 
 
 @bp.route("/<int:id>", methods=["DELETE", "OPTIONS"])
@@ -90,11 +92,15 @@ def delete_model(current_user, id):
         return "", 200
     model = session.query(ModelEntry).filter_by(id=id, user_id=current_user.id).first()
     if not model:
-        return {"error": "Model not found"}, 404
+        return jsonify(ApiResponseHandler.error("Model not found", 404)), 404
 
     session.delete(model)
     session.commit()
-    return "", 204
+    return jsonify(
+        ApiResponseHandler.success(
+            None, message="Model deleted successfully", status_code=204
+        )
+    ), 204
 
 
 @bp.route("/search", methods=["GET", "OPTIONS"])
@@ -119,7 +125,9 @@ def search_models(current_user):
     if tag:
         models = models.filter(ModelEntry.tags.contains([tag]))
 
-    return jsonify([model.to_dict() for model in models.all()])
+    return jsonify(
+        ApiResponseHandler.success([model.to_dict() for model in models.all()])
+    )
 
 
 @bp.route("/autofill", methods=["POST", "OPTIONS"])
@@ -128,13 +136,43 @@ def search_models(current_user):
 def autofill_model(current_user):
     if request.method == "OPTIONS":
         return "", 200
-    data = request.get_json()
-    model_id: str = data.get("model_id")
-    model_links: list = data.get("model_links")
 
-    agent_service = AgentService(model_id=model_id, model_links=model_links)
-    agent_response = agent_service.run_agent()
-    return jsonify(agent_response)
+    upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+    if not os.path.exists(upload_dir):
+        os.makedirs(upload_dir)
+
+    model_id = request.form.get("model_id")
+    model_links = request.form.getlist("model_links")
+    uploaded_files = request.files.getlist("files")
+
+    file_paths = []
+    try:
+        for file in uploaded_files:
+            if file and file.filename:
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(upload_dir, filename)
+                file.save(file_path)
+                file_paths.append(file_path)
+
+        agent_service = AgentService(
+            model_id=model_id, model_links=model_links, doc_paths=file_paths
+        )
+        agent_response = agent_service.run_agent()
+
+        for file_path in file_paths:
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+
+        return jsonify(ApiResponseHandler.success({"response": agent_response})), 200
+    except Exception as e:
+        for file_path in file_paths:
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+        return jsonify(ApiResponseHandler.error(str(e), 500)), 500
 
 
 @bp.route("/<int:id>/insights", methods=["GET", "OPTIONS"])
@@ -145,10 +183,10 @@ def get_model_insights(current_user, id):
         return "", 200
     model = session.query(ModelEntry).filter_by(id=id, user_id=current_user.id).first()
     if not model:
-        return {"error": "Model not found"}, 404
+        return jsonify(ApiResponseHandler.error("Model not found", 404)), 404
 
-    insights = rag_service.generate_model_insights(model.to_dict())
-    return jsonify(insights)
+    insights = model_insights_service.generate_model_insights(model.to_dict())
+    return jsonify(ApiResponseHandler.success(insights))
 
 
 @bp.route("/insights/compare", methods=["POST", "OPTIONS"])
@@ -161,7 +199,7 @@ def compare_models(current_user):
     model_ids = data.get("model_ids", [])
 
     if not model_ids:
-        return {"error": "No model IDs provided"}, 400
+        return jsonify(ApiResponseHandler.error("No model IDs provided", 400)), 400
 
     models = (
         session.query(ModelEntry)
@@ -169,9 +207,26 @@ def compare_models(current_user):
         .all()
     )
     if not models:
-        return {"error": "No models found"}, 404
+        return jsonify(ApiResponseHandler.error("No models found", 404)), 404
 
-    analysis = rag_service.analyze_multiple_models(
+    analysis = model_insights_service.analyze_multiple_models(
         [model.to_dict() for model in models]
     )
-    return jsonify(analysis)
+    return jsonify(ApiResponseHandler.success(analysis))
+
+
+@bp.route("/semantic-search", methods=["GET", "OPTIONS"])
+@cross_origin(origins=["http://localhost:5173"], methods=["GET", "OPTIONS"])
+def semantic_search():
+    if request.method == "OPTIONS":
+        return "", 200
+
+    query = request.args.get("q", "")
+    if not query:
+        return jsonify(ApiResponseHandler.error("Search query is required", 400)), 400
+
+    try:
+        results = semantic_search_service.search(query)
+        return jsonify(ApiResponseHandler.success(results))
+    except Exception as e:
+        return jsonify(ApiResponseHandler.error(str(e), 500)), 500

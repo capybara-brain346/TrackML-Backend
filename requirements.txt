@@ -2,7 +2,7 @@ flask
 sqlalchemy
 flask-migrate
 flask-cors
-python-dotenv
+python-dotenv>=1.0.0
 alembic
 google-generativeai
 agno
@@ -19,7 +19,7 @@ asgiref
 attrs
 backoff
 bcrypt
-beautifulsoup4
+beautifulsoup4>=4.12.2
 blinker
 Brotli
 build
@@ -92,7 +92,7 @@ monotonic
 mpmath
 multidict
 nltk
-numpy
+numpy>=1.24.0
 oauthlib
 ollama
 onnxruntime
@@ -135,13 +135,13 @@ PyPika
 pyproject_hooks
 pyreadline3
 python-dateutil
-python-dotenv
+python-dotenv>=1.0.0
 python-multipart
 PyYAML
 rank-bm25
 referencing
 regex
-requests
+requests>=2.31.0
 requests-oauthlib
 rich
 rpds-py
@@ -176,3 +176,14 @@ wrapt
 xxhash
 yarl
 zipp
+langchain>=0.1.0
+langchain-community>=0.0.10
+langchain-core>=0.1.10
+langchain-groq>=0.0.3
+faiss-cpu>=1.7.4
+sentence-transformers>=2.2.2
+transformers>=4.36.0
+pypdf
+python-docx
+unstructured
+pdf2image
