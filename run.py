@@ -39,9 +39,11 @@ def create_app(config_class=Config):
             response.headers.add("Access-Control-Allow-Credentials", "true")
             return response
 
+    from routes.health_routes import bp as health_bp
     from routes.model_routes import bp as models_bp
     from routes.auth_routes import bp as auth_bp
 
+    app.register_blueprint(health_bp)
     app.register_blueprint(models_bp, url_prefix="/api/v1/models")
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
 
