@@ -11,3 +11,5 @@ google-genai
 scikit-learn
 duckduckgo_search
 psycopg2-binary
+gunicorn
+faiss-cpu

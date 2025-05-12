@@ -2,6 +2,11 @@ from models.models import Base, engine
 from config import Config
 from flask import Flask, request, make_response
 from flask_cors import CORS
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 
 def create_app(config_class=Config):
@@ -12,7 +17,7 @@ def create_app(config_class=Config):
         app,
         resources={
             r"/api/v1/*": {
-                "origins": ["http://localhost:3000"],
+                "origins": [FRONTEND_URL],
                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization"],
                 "supports_credentials": True,
@@ -24,7 +29,7 @@ def create_app(config_class=Config):
     def handle_preflight():
         if request.method == "OPTIONS":
             response = make_response()
-            response.headers.add("Access-Control-Allow-Origin", "http://localhost:3000")
+            response.headers.add("Access-Control-Allow-Origin", FRONTEND_URL)
             response.headers.add(
                 "Access-Control-Allow-Headers", "Content-Type,Authorization"
             )

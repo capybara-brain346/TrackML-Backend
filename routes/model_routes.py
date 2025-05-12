@@ -9,13 +9,17 @@ from services.semantic_search_service import SemanticSearchService
 from flask_cors import cross_origin, CORS
 from api_typing.typing import ApiResponseHandler
 from routes.auth_routes import token_required
+from dotenv import load_dotenv
+
+load_dotenv()
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 bp = Blueprint("models", __name__, url_prefix="/models")
 CORS(
     bp,
     resources={
         r"/*": {
-            "origins": ["http://localhost:3000"],
+            "origins": [FRONTEND_URL],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         }
     },
@@ -26,7 +30,7 @@ semantic_search_service = SemanticSearchService()
 
 
 @bp.route("/", methods=["GET", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["GET", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["GET", "OPTIONS"])
 @token_required
 def get_models(current_user):
     if request.method == "OPTIONS":
@@ -36,7 +40,7 @@ def get_models(current_user):
 
 
 @bp.route("/<int:id>", methods=["GET", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["GET", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["GET", "OPTIONS"])
 @token_required
 def get_model(current_user, id):
     if request.method == "OPTIONS":
@@ -48,7 +52,7 @@ def get_model(current_user, id):
 
 
 @bp.route("/", methods=["POST", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["POST", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["POST", "OPTIONS"])
 @token_required
 def create_model(current_user):
     if request.method == "OPTIONS":
@@ -65,7 +69,7 @@ def create_model(current_user):
 
 
 @bp.route("/<int:id>", methods=["PUT", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["PUT", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["PUT", "OPTIONS"])
 @token_required
 def update_model(current_user, id):
     if request.method == "OPTIONS":
@@ -86,7 +90,7 @@ def update_model(current_user, id):
 
 
 @bp.route("/<int:id>", methods=["DELETE", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["DELETE", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["DELETE", "OPTIONS"])
 @token_required
 def delete_model(current_user, id):
     if request.method == "OPTIONS":
@@ -105,7 +109,7 @@ def delete_model(current_user, id):
 
 
 @bp.route("/search", methods=["GET", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["GET", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["GET", "OPTIONS"])
 @token_required
 def search_models(current_user):
     if request.method == "OPTIONS":
@@ -132,7 +136,7 @@ def search_models(current_user):
 
 
 @bp.route("/autofill", methods=["POST", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["POST", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["POST", "OPTIONS"])
 @token_required
 def autofill_model(current_user):
     if request.method == "OPTIONS":
@@ -178,7 +182,7 @@ def autofill_model(current_user):
 
 @bp.route("/<int:id>/insights", methods=["GET", "POST", "OPTIONS"])
 @cross_origin(
-    origins=["http://localhost:3000"],
+    origins=[FRONTEND_URL],
     methods=["GET", "POST", "OPTIONS"],
 )
 def get_model_insights(id):
@@ -195,7 +199,7 @@ def get_model_insights(id):
 
 
 @bp.route("/insights/compare", methods=["POST", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["POST", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["POST", "OPTIONS"])
 @token_required
 def compare_models(current_user):
     if request.method == "OPTIONS":
@@ -222,7 +226,7 @@ def compare_models(current_user):
 
 
 @bp.route("/semantic-search", methods=["GET", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["GET", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["GET", "OPTIONS"])
 def semantic_search():
     if request.method == "OPTIONS":
         return "", 200

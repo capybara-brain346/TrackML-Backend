@@ -9,13 +9,14 @@ from dotenv import load_dotenv
 from api_typing.typing import ApiResponseHandler
 
 load_dotenv()
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 CORS(
     bp,
     resources={
         r"/*": {
-            "origins": ["http://localhost:3000"],
+            "origins": [FRONTEND_URL],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         }
     },
@@ -44,7 +45,7 @@ def token_required(f):
 
 
 @bp.route("/register", methods=["POST", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["POST", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["POST", "OPTIONS"])
 def register_user():
     if request.method == "OPTIONS":
         return "", 200
@@ -82,7 +83,7 @@ def register_user():
 
 
 @bp.route("/login", methods=["POST", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["POST", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["POST", "OPTIONS"])
 def login():
     if request.method == "OPTIONS":
         return "", 200
@@ -108,14 +109,14 @@ def login():
 
 
 @bp.route("/verify-token", methods=["GET", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["GET", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["GET", "OPTIONS"])
 @token_required
 def verify_token(current_user):
     return jsonify(ApiResponseHandler.success({"user": current_user.to_dict()})), 200
 
 
 @bp.route("/user/<int:user_id>", methods=["PUT", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["PUT", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["PUT", "OPTIONS"])
 @token_required
 def update_user(current_user, user_id):
     if request.method == "OPTIONS":
@@ -161,7 +162,7 @@ def update_user(current_user, user_id):
 
 
 @bp.route("/user/<int:user_id>", methods=["DELETE", "OPTIONS"])
-@cross_origin(origins=["http://localhost:3000"], methods=["DELETE", "OPTIONS"])
+@cross_origin(origins=[FRONTEND_URL], methods=["DELETE", "OPTIONS"])
 @token_required
 def delete_user(current_user, user_id):
     if request.method == "OPTIONS":
