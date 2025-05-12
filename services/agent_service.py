@@ -16,6 +16,7 @@ from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_groq import ChatGroq
 from langchain.retrievers import EnsembleRetriever
 from langchain.retrievers.multi_query import MultiQueryRetriever
+from utils.logging import logger
 
 load_dotenv()
 
@@ -34,44 +35,59 @@ class AgentService:
         self.embeddings = HuggingFaceEmbeddings(
             model_name="BAAI/bge-small-en-v1.5", model_kwargs={"device": "cpu"}
         )
+
         self.llm = ChatGroq(
             temperature=0.1,
             model_name="meta-llama/llama-4-scout-17b-16e-instruct",
             groq_api_key=os.getenv("GROQ_API_KEY"),
         )
         self.search_tool = DuckDuckGoSearchResults(output_format="list")
+        logger.info(f"AgentService initialization completed for {self.model.id}")
 
     def _search_web(self) -> List[str]:
+        logger.info(f"Starting web search for model: {self.model_id}")
         if not self.provided_links:
             try:
+                logger.debug("No links provided, performing DuckDuckGo search")
                 search_results = self.search_tool.run(
                     f"{self.model_id} machine learning model technical details documentation"
                 )
 
                 self.provided_links = [result["link"] for result in search_results]
+                logger.info(f"Found {len(self.provided_links)} links from search")
 
                 if not self.provided_links:
+                    logger.warning("No valid links found in search results")
                     raise ValueError("No valid links found in search results")
 
             except Exception as e:
+                logger.error(f"Web search failed: {str(e)}")
                 raise Exception(f"Error in web search: {str(e)}")
 
         return self.provided_links
 
     def _load_local_documents(self) -> List[Any]:
+        logger.info(f"Loading local documents from {len(self.doc_paths)} paths")
         documents = []
         for path in self.doc_paths:
             try:
                 ext = os.path.splitext(path)[1].lower()
+                logger.debug(f"Processing document: {path} with extension {ext}")
                 if ext == ".pdf":
                     loader = PyPDFLoader(path)
                 elif ext in [".doc", ".docx"]:
                     loader = UnstructuredWordDocumentLoader(path)
                 else:
+                    logger.warning(f"Unsupported file extension: {ext} for file {path}")
                     continue
-                documents.extend(loader.load())
+                loaded_docs = loader.load()
+                documents.extend(loaded_docs)
+                logger.debug(
+                    f"Successfully loaded {len(loaded_docs)} pages from {path}"
+                )
             except Exception as e:
-                print(f"Error loading document {path}: {str(e)}")
+                logger.error(f"Failed to load document {path}: {str(e)}")
+        logger.info(f"Total documents loaded: {len(documents)}")
         return documents
 
     def _create_vectorstore(self, documents) -> FAISS:
@@ -83,6 +99,7 @@ class AgentService:
         splits = text_splitter.split_documents(documents)
 
         vectorstore = FAISS.from_documents(splits, self.embeddings)
+        logger.info("Vector store creation completed")
         return vectorstore
 
     def _setup_rag_pipeline(self, vectorstore):
@@ -122,33 +139,43 @@ class AgentService:
             | StrOutputParser()
         )
 
+        logger.info("RAG pipeline setup completed")
         return chain
 
     def run_agent(self) -> str:
+        logger.info(f"Starting agent run for model: {self.model_id}")
         try:
             links = self._search_web()
             documents = []
 
             if links:
+                logger.debug(f"Loading web documents from {len(links)} links")
                 web_loader = WebBaseLoader(links)
                 documents.extend(web_loader.load())
 
-            documents.extend(self._load_local_documents())
+            local_docs = self._load_local_documents()
+            documents.extend(local_docs)
 
             if not documents:
+                logger.error("No documents were successfully loaded")
                 raise ValueError("No documents were successfully loaded")
 
             vectorstore = self._create_vectorstore(documents)
             chain = self._setup_rag_pipeline(vectorstore)
+
+            logger.debug("Executing RAG chain")
             response = chain.invoke(self.model_id)
+            logger.info("Agent run completed successfully")
 
             return response
 
         except Exception as e:
+            logger.error(f"Agent run failed: {str(e)}")
             raise Exception(f"Error in RAG pipeline: {str(e)}")
 
 
 if __name__ == "__main__":
+    logger.info("Starting agent service test run")
     agent = AgentService(
         "meta-llama/Llama-3.2-1B",
         [

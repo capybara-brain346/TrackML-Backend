@@ -2,6 +2,7 @@ import os
 from typing import Dict, Any, List
 from google import genai
 from dotenv import load_dotenv
+from utils.logging import logger
 
 load_dotenv()
 
@@ -10,13 +11,18 @@ class ModelInsightsService:
     def __init__(self):
         self.client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
         self.model = "gemini-2.0-flash"
+        logger.info("ModelInsightsService initialized")
 
     def generate_model_insights(
         self, model_data: Dict[str, Any], custom_prompt: str = None
     ) -> Dict[str, Any]:
+        logger.info(
+            f"Generating insights for model: {model_data.get('name', 'Unknown')}"
+        )
         insights = {}
 
         if custom_prompt:
+            logger.debug(f"Using custom prompt: {custom_prompt}")
             context = self._prepare_context(model_data)
             custom_prompt_with_context = f"""
             Given this ML model context:
@@ -98,9 +104,11 @@ class ModelInsightsService:
         """
         insights["recommendations"] = self._generate_content(rec_prompt)
 
+        logger.info("Successfully generated all insights")
         return insights
 
     def _prepare_context(self, model_data: Dict[str, Any]) -> str:
+        logger.debug("Preparing model context")
         context_parts = [
             f"Model Name: {model_data.get('name', 'N/A')}",
             f"Developer: {model_data.get('developer', 'N/A')}",
@@ -119,16 +127,18 @@ class ModelInsightsService:
             )
             return response.text
         except Exception as e:
-            print(f"Error generating content: {e}")
+            logger.error(f"Error generating content: {str(e)}")
             return "Error generating insights"
 
     def analyze_multiple_models(
         self, models_data: List[Dict[str, Any]], custom_prompt: str = None
     ) -> Dict[str, Any]:
+        logger.info(f"Starting comparative analysis of {len(models_data)} models")
         contexts = [str(model) for model in models_data]
         combined_context = "\n\n".join(contexts)
 
         if custom_prompt:
+            logger.debug(f"Using custom prompt for comparison: {custom_prompt}")
             prompt = f"""
             Based on these ML models:
             {combined_context}
@@ -139,6 +149,7 @@ class ModelInsightsService:
             Provide a detailed, specific, and actionable response focusing on the user's query while comparing the models.
             """
         else:
+            logger.debug("Using default comparison prompt")
             prompt = f"""
             Based on these ML models:
             {combined_context}
@@ -156,7 +167,8 @@ class ModelInsightsService:
             response = self.client.models.generate_content(
                 model=self.model, contents=prompt
             )
+            logger.info("Comparative analysis completed successfully")
             return {"comparative_analysis": response.text}
         except Exception as e:
-            print(f"Error in comparative analysis: {e}")
+            logger.error(f"Error in comparative analysis: {str(e)}")
             return {"error": "Failed to generate comparative analysis"}
