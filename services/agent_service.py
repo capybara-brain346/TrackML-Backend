@@ -46,25 +46,29 @@ class AgentService:
 
     def _search_web(self) -> List[str]:
         logger.info(f"Starting web search for model: {self.model_id}")
-        if not self.provided_links:
-            try:
-                logger.debug("No links provided, performing DuckDuckGo search")
-                search_results = self.search_tool.run(
-                    f"{self.model_id} machine learning model technical details documentation"
+        all_links = set(self.provided_links) if self.provided_links else set()
+
+        try:
+            logger.debug("Performing DuckDuckGo search")
+            search_results = self.search_tool.run(
+                f"{self.model_id} machine learning model technical details documentation"
+            )
+
+            search_links = {result["link"] for result in search_results}
+            all_links.update(search_links)
+            logger.info(f"Found total of {len(all_links)} unique links")
+
+            if not all_links:
+                logger.warning("No valid links found from both sources")
+                raise ValueError(
+                    "No valid links found from both provided links and search results"
                 )
 
-                self.provided_links = [result["link"] for result in search_results]
-                logger.info(f"Found {len(self.provided_links)} links from search")
+        except Exception as e:
+            logger.error(f"Web search failed: {str(e)}")
+            raise Exception(f"Error in web search: {str(e)}")
 
-                if not self.provided_links:
-                    logger.warning("No valid links found in search results")
-                    raise ValueError("No valid links found in search results")
-
-            except Exception as e:
-                logger.error(f"Web search failed: {str(e)}")
-                raise Exception(f"Error in web search: {str(e)}")
-
-        return self.provided_links
+        return list(all_links)
 
     def _load_local_documents(self) -> List[Any]:
         logger.info(f"Loading local documents from {len(self.doc_paths)} paths")
