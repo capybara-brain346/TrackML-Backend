@@ -13,3 +13,4 @@ duckduckgo_search
 psycopg2-binary
 gunicorn
 faiss-cpu
+sentence-transformers
