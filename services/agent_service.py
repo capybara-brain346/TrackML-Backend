@@ -73,19 +73,10 @@ class AgentService:
             search_links = {result["link"] for result in search_results}
             all_links.update(search_links)
             logger.info(f"Found total of {len(all_links)} unique links")
-
-            if not all_links:
-                logger.warning("No valid links found from both sources")
-                raise ValueError(
-                    "No valid links found from both provided links and search results"
-                )
-
         except Exception as e:
-            logger.error(f"Web search failed: {str(e)}")
-            if self.provided_links:
-                logger.info("Continuing with provided links despite search failure")
-                return self.provided_links
-            raise Exception(f"Error in web search: {str(e)}")
+            logger.warning(f"Web search failed: {str(e)}")
+            logger.info("Continuing with provided links or local documents only")
+            return list(all_links)
 
         return list(all_links)
 
@@ -168,20 +159,27 @@ class AgentService:
     def run_agent(self) -> str:
         logger.info(f"Starting agent run for model: {self.model_id}")
         try:
-            links = self._search_web()
             documents = []
 
-            if links:
-                logger.debug(f"Loading web documents from {len(links)} links")
-                web_loader = WebBaseLoader(links)
-                documents.extend(web_loader.load())
+            try:
+                links = self._search_web()
+                if links:
+                    logger.debug(f"Loading web documents from {len(links)} links")
+                    web_loader = WebBaseLoader(links)
+                    documents.extend(web_loader.load())
+            except Exception as e:
+                logger.warning(f"Web document loading failed: {str(e)}")
 
             local_docs = self._load_local_documents()
             documents.extend(local_docs)
 
             if not documents:
-                logger.error("No documents were successfully loaded")
-                raise ValueError("No documents were successfully loaded")
+                logger.warning(
+                    "No documents were loaded, attempting to proceed with minimal context"
+                )
+                documents = [
+                    {"page_content": f"Model ID: {self.model_id}", "metadata": {}}
+                ]
 
             vectorstore = self._create_vectorstore(documents)
             chain = self._setup_rag_pipeline(vectorstore)
