@@ -14,3 +14,4 @@ psycopg2-binary
 gunicorn
 faiss-cpu
 sentence-transformers
+tenacity

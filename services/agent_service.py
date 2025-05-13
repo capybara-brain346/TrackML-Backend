@@ -17,6 +17,8 @@ from langchain_groq import ChatGroq
 from langchain.retrievers import EnsembleRetriever
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from utils.logging import logger
+import time
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 load_dotenv()
 
@@ -44,13 +46,27 @@ class AgentService:
         self.search_tool = DuckDuckGoSearchResults(output_format="list")
         logger.info(f"AgentService initialization completed for {self.model_id}")
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        reraise=True,
+    )
+    def _perform_search(self, query: str) -> List[dict]:
+        try:
+            return self.search_tool.run(query)
+        except Exception as e:
+            if "202 Ratelimit" in str(e):
+                logger.warning("DuckDuckGo rate limit hit, retrying with backoff...")
+                raise
+            raise Exception(f"Unexpected error in search: {str(e)}")
+
     def _search_web(self) -> List[str]:
         logger.info(f"Starting web search for model: {self.model_id}")
         all_links = set(self.provided_links) if self.provided_links else set()
 
         try:
             logger.debug("Performing DuckDuckGo search")
-            search_results = self.search_tool.run(
+            search_results = self._perform_search(
                 f"{self.model_id} machine learning model technical details documentation"
             )
 
@@ -66,6 +82,9 @@ class AgentService:
 
         except Exception as e:
             logger.error(f"Web search failed: {str(e)}")
+            if self.provided_links:
+                logger.info("Continuing with provided links despite search failure")
+                return self.provided_links
             raise Exception(f"Error in web search: {str(e)}")
 
         return list(all_links)
