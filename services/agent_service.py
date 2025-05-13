@@ -1,6 +1,8 @@
 import os
 from typing import List, Optional, Any
 from dotenv import load_dotenv
+import requests
+from bs4 import BeautifulSoup
 from langchain_community.vectorstores import FAISS
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -16,6 +18,7 @@ from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_groq import ChatGroq
 from langchain.retrievers import EnsembleRetriever
 from langchain.retrievers.multi_query import MultiQueryRetriever
+from langchain.schema import Document
 from utils.logging import logger
 
 load_dotenv()
@@ -27,10 +30,14 @@ class AgentService:
         model_id: str,
         model_links: Optional[List[str]] = None,
         doc_paths: Optional[List[str]] = None,
+        use_scraping: bool = True,
+        use_ddg: bool = False,
     ):
         self.model_id = model_id
         self.provided_links = model_links or []
         self.doc_paths = doc_paths or []
+        self.use_scraping = use_scraping
+        self.use_ddg = use_ddg
 
         self.embeddings = HuggingFaceEmbeddings(
             model_name="BAAI/bge-small-en-v1.5", model_kwargs={"device": "cpu"}
@@ -41,34 +48,75 @@ class AgentService:
             model_name="meta-llama/llama-4-scout-17b-16e-instruct",
             groq_api_key=os.getenv("GROQ_API_KEY"),
         )
-        self.search_tool = DuckDuckGoSearchResults(output_format="list")
+        self.search_tool = (
+            DuckDuckGoSearchResults(output_format="list") if use_ddg else None
+        )
         logger.info(f"AgentService initialization completed for {self.model_id}")
+
+    def _scrape_webpage(self, url: str) -> str:
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            }
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.text, "html.parser")
+
+            for script in soup(["script", "style", "meta", "link"]):
+                script.decompose()
+
+            text = soup.get_text(separator=" ", strip=True)
+            lines = [line.strip() for line in text.splitlines() if line.strip()]
+            text = " ".join(lines)
+
+            return text
+        except Exception as e:
+            logger.error(f"Failed to scrape {url}: {str(e)}")
+            return ""
 
     def _search_web(self) -> List[str]:
         logger.info(f"Starting web search for model: {self.model_id}")
         all_links = set(self.provided_links) if self.provided_links else set()
 
-        try:
-            logger.debug("Performing DuckDuckGo search")
-            search_results = self.search_tool.run(
-                f"{self.model_id} machine learning model technical details documentation"
-            )
-
-            search_links = {result["link"] for result in search_results}
-            all_links.update(search_links)
-            logger.info(f"Found total of {len(all_links)} unique links")
-
-            if not all_links:
-                logger.warning("No valid links found from both sources")
-                raise ValueError(
-                    "No valid links found from both provided links and search results"
+        if self.use_ddg:
+            try:
+                logger.debug("Performing DuckDuckGo search")
+                search_results = self.search_tool.run(
+                    f"{self.model_id} machine learning model technical details documentation"
                 )
+                search_links = {result["link"] for result in search_results}
+                all_links.update(search_links)
+                logger.info(f"Found {len(search_links)} links from DuckDuckGo search")
+            except Exception as e:
+                logger.warning(f"DuckDuckGo search failed: {str(e)}")
 
-        except Exception as e:
-            logger.error(f"Web search failed: {str(e)}")
-            raise Exception(f"Error in web search: {str(e)}")
+        if not all_links:
+            if not self.provided_links:
+                logger.warning(
+                    "No links available - neither provided links nor DuckDuckGo search results"
+                )
+                raise ValueError("No links available for processing")
+            logger.info("Using only provided links")
 
         return list(all_links)
+
+    def _process_web_content(self, links: List[str]) -> List[Document]:
+        documents = []
+        for url in links:
+            try:
+                if self.use_scraping:
+                    content = self._scrape_webpage(url)
+                    if content:
+                        doc = Document(page_content=content, metadata={"source": url})
+                        documents.append(doc)
+                else:
+                    web_loader = WebBaseLoader([url])
+                    documents.extend(web_loader.load())
+                logger.debug(f"Successfully processed content from {url}")
+            except Exception as e:
+                logger.error(f"Failed to process content from {url}: {str(e)}")
+        return documents
 
     def _load_local_documents(self) -> List[Any]:
         logger.info(f"Loading local documents from {len(self.doc_paths)} paths")
@@ -154,8 +202,7 @@ class AgentService:
 
             if links:
                 logger.debug(f"Loading web documents from {len(links)} links")
-                web_loader = WebBaseLoader(links)
-                documents.extend(web_loader.load())
+                documents.extend(self._process_web_content(links))
 
             local_docs = self._load_local_documents()
             documents.extend(local_docs)

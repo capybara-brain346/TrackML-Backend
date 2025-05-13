@@ -15,3 +15,8 @@ gunicorn
 faiss-cpu
 sentence-transformers
 tenacity
+requests
+beautifulsoup4
+unstructured
+python-docx
+pypdf
