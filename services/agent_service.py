@@ -17,8 +17,6 @@ from langchain_groq import ChatGroq
 from langchain.retrievers import EnsembleRetriever
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from utils.logging import logger
-import time
-from tenacity import retry, stop_after_attempt, wait_exponential
 
 load_dotenv()
 
@@ -44,21 +42,7 @@ class AgentService:
             groq_api_key=os.getenv("GROQ_API_KEY"),
         )
         self.search_tool = DuckDuckGoSearchResults(output_format="list")
-        logger.info(f"AgentService initialization completed for {self.model_id}")
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        reraise=True,
-    )
-    def _perform_search(self, query: str) -> List[dict]:
-        try:
-            return self.search_tool.run(query)
-        except Exception as e:
-            if "202 Ratelimit" in str(e):
-                logger.warning("DuckDuckGo rate limit hit, retrying with backoff...")
-                raise
-            raise Exception(f"Unexpected error in search: {str(e)}")
+        logger.info(f"AgentService initialization completed for {self.model.id}")
 
     def _search_web(self) -> List[str]:
         logger.info(f"Starting web search for model: {self.model_id}")
@@ -66,17 +50,23 @@ class AgentService:
 
         try:
             logger.debug("Performing DuckDuckGo search")
-            search_results = self._perform_search(
+            search_results = self.search_tool.run(
                 f"{self.model_id} machine learning model technical details documentation"
             )
 
             search_links = {result["link"] for result in search_results}
             all_links.update(search_links)
             logger.info(f"Found total of {len(all_links)} unique links")
+
+            if not all_links:
+                logger.warning("No valid links found from both sources")
+                raise ValueError(
+                    "No valid links found from both provided links and search results"
+                )
+
         except Exception as e:
-            logger.warning(f"Web search failed: {str(e)}")
-            logger.info("Continuing with provided links or local documents only")
-            return list(all_links)
+            logger.error(f"Web search failed: {str(e)}")
+            raise Exception(f"Error in web search: {str(e)}")
 
         return list(all_links)
 
@@ -159,27 +149,20 @@ class AgentService:
     def run_agent(self) -> str:
         logger.info(f"Starting agent run for model: {self.model_id}")
         try:
+            links = self._search_web()
             documents = []
 
-            try:
-                links = self._search_web()
-                if links:
-                    logger.debug(f"Loading web documents from {len(links)} links")
-                    web_loader = WebBaseLoader(links)
-                    documents.extend(web_loader.load())
-            except Exception as e:
-                logger.warning(f"Web document loading failed: {str(e)}")
+            if links:
+                logger.debug(f"Loading web documents from {len(links)} links")
+                web_loader = WebBaseLoader(links)
+                documents.extend(web_loader.load())
 
             local_docs = self._load_local_documents()
             documents.extend(local_docs)
 
             if not documents:
-                logger.warning(
-                    "No documents were loaded, attempting to proceed with minimal context"
-                )
-                documents = [
-                    {"page_content": f"Model ID: {self.model_id}", "metadata": {}}
-                ]
+                logger.error("No documents were successfully loaded")
+                raise ValueError("No documents were successfully loaded")
 
             vectorstore = self._create_vectorstore(documents)
             chain = self._setup_rag_pipeline(vectorstore)
