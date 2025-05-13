@@ -42,7 +42,7 @@ class AgentService:
             groq_api_key=os.getenv("GROQ_API_KEY"),
         )
         self.search_tool = DuckDuckGoSearchResults(output_format="list")
-        logger.info(f"AgentService initialization completed for {self.model.id}")
+        logger.info(f"AgentService initialization completed for {self.model_id}")
 
     def _search_web(self) -> List[str]:
         logger.info(f"Starting web search for model: {self.model_id}")
