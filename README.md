@@ -1,6 +1,8 @@
 ![ChatGPT Image Apr 26, 2025, 02_40_29 PM](https://github.com/user-attachments/assets/320afee0-1db2-4978-8fc4-28c8e1827e28)
 # TrackML
 
+![diagram-export-5-17-2025-10_20_27-PM](https://github.com/user-attachments/assets/6e66b545-5460-4f73-aae8-ded9af9e99c1)
+
 TrackML is a comprehensive tool for tracking and managing machine learning models. It helps users keep track of models they've explored, studied, or plan to use in the future, with powerful features powered by Gemini AI and HuggingFace integration.
 
 ## Features
